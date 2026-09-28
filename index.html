@@ -1645,7 +1645,8 @@ function autoDetectCurrentPeriod(showFeedback = true) {
     else if (minutes < 740) detected = "4";
     else if (minutes < 855) detected = "5";
     else if (minutes < 910) detected = "6";
-    else detected = "7";
+    else if (minutes < 960) detected = "7";
+    else detected = "8"; // 👈 新增第 8 節判定
 
     const select = document.getElementById("batch-period");
     if (select) {
@@ -1670,7 +1671,7 @@ function renderBatchCards() {
     const period = document.getElementById("batch-period")?.value || "3";
     const periodNum = parseInt(period, 10);
     renderedBatchContext = { semester: CURRENT_SEMESTER, date: dateVal, weekday, period };
-    const isWedAfternoon = (weekday === "Wed" && periodNum >= 5);
+    const isWedAfternoon = false; // 👈 直接設為 false，取消週三下午半天放學/研習限制
 
     const indicator = document.getElementById("batch-status-indicator");
     if (indicator) {
@@ -2329,7 +2330,7 @@ function getTeacherScheduleData(teacherName) {
         weekdays.forEach(day => {
             const slot = MASTER_SCHEDULE[cls]?.[day];
             if (!slot) return;
-            for (let p = 1; p <= 7; p++) {
+            for (let p = 1; p <= 8; p++) {
                 if (slot[p] && slot[p].t === teacherName) {
                     sched[day][p] = { cls: cls, sub: slot[p].sub };
                     totalPeriods++;
@@ -2407,12 +2408,12 @@ function openTeacherModal(teacherName) {
 
     const weekdays = ["Mon", "Tue", "Wed", "Thu", "Fri"];
     let html = "";
-    for (let p = 1; p <= 7; p++) {
+    for (let p = 1; p <= 8; p++) {
         html += `<tr class="hover:bg-slate-50 transition text-center">`;
         html += `<td class="p-2.5 border border-slate-200 font-bold bg-slate-50">第 ${p} 節<br><span class="text-xs text-slate-400 font-normal">${PERIOD_TIMES[p]}</span></td>`;
 
         weekdays.forEach(day => {
-            const isWedAfternoon = (day === "Wed" && p >= 5);
+            const isWedAfternoon = false;
             const slot = sched[day] ? sched[day][p] : null;
 
             if (isWedAfternoon) {
@@ -2518,12 +2519,12 @@ function renderTimetableGrid() {
         if (subBadgeEl) subBadgeEl.innerText = `每週授課 ${totalPeriods} 節`;
 
         let html = "";
-        for (let p = 1; p <= 7; p++) {
+        for (let p = 1; p <= 8; p++) {
             html += `<tr class="hover:bg-slate-50 transition text-center">`;
             html += `<td class="p-3 border border-slate-200 font-black bg-slate-50">第 ${p} 節<br><span class="text-xs text-slate-400 font-normal">${PERIOD_TIMES[p]}</span></td>`;
 
             weekdays.forEach(day => {
-                const isWedAfternoon = (day === "Wed" && p >= 5);
+                const isWedAfternoon = false;
                 const slot = sched[day]?.[p];
 
                 if (isWedAfternoon) {
@@ -2554,7 +2555,7 @@ function renderTimetableGrid() {
         if (subBadgeEl) subBadgeEl.innerText = `全週 ${classWeeklyPeriods[selectedClass] || 40} 節`;
 
         let html = "";
-        for (let p = 1; p <= 7; p++) {
+        for (let p = 1; p <= 8; p++) {
             html += `<tr class="hover:bg-slate-50"><td class="p-3 border border-slate-200 font-black bg-slate-50">第 ${p} 節<br><span class="text-xs text-slate-400 font-normal">${PERIOD_TIMES[p]}</span></td>`;
             weekdays.forEach(day => {
                 const slot = sched[day]?.[p];
