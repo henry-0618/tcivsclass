@@ -511,7 +511,7 @@
             <div class="p-4 sm:p-6 space-y-4">
                 <div class="flex items-center justify-between">
                     <h3 class="text-base sm:text-lg font-black text-slate-900 flex items-center space-x-2">
-                        <span>現場課務檢核（一甲 ～ 六甲）</span>
+                        <span>現場課務檢核（一化甲 ～ 三化乙）</span>
                         <span id="batch-status-indicator" class="text-sm font-bold px-2.5 py-1 rounded-lg bg-blue-100 text-blue-900">載入中...</span>
                     </h3>
                 </div>
@@ -2549,7 +2549,7 @@ function renderTimetableGrid() {
         // 班級課表模式
         const selectedClass = document.getElementById("select-timetable-class")?.value || "五甲";
         const sched = MASTER_SCHEDULE[selectedClass] || {};
-        const classWeeklyPeriods = { "一甲": 40, "二甲": 40, "三甲": 40, "四甲": 40, "五甲": 40, "六甲": 40 };
+        const classWeeklyPeriods = { "一化甲": 40, "一化乙": 40, "二化甲": 40, "二化乙": 40, "三化甲": 40, "三化乙": 40 };
 
         if (labelEl) labelEl.innerText = `${selectedClass} 班級週課表`;
         if (subBadgeEl) subBadgeEl.innerText = `全週 ${classWeeklyPeriods[selectedClass] || 40} 節`;
@@ -2559,9 +2559,9 @@ function renderTimetableGrid() {
             html += `<tr class="hover:bg-slate-50"><td class="p-3 border border-slate-200 font-black bg-slate-50">第 ${p} 節<br><span class="text-xs text-slate-400 font-normal">${PERIOD_TIMES[p]}</span></td>`;
             weekdays.forEach(day => {
                 const slot = sched[day]?.[p];
-                if (day === "Wed" && p >= 5) {
-                    html += `<td class="p-3 border border-slate-200 text-slate-400 bg-slate-50 text-sm font-bold">全校研習<br>(無排課)</td>`;
-                } else if (slot) {
+                weekdays.forEach(day => {
+                const slot = sched[day]?.[p];
+                if (slot) { // 👈 直接改為 if (slot)，不再阻擋週三下午
                     const encodedTeacher = encodeInlineValue(slot.t);
                     html += `
                         <td class="p-3 border border-slate-200">
