@@ -2547,7 +2547,7 @@ function renderTimetableGrid() {
 
     } else {
         // 班級課表模式
-        const selectedClass = document.getElementById("select-timetable-class")?.value || "五甲";
+        const selectedClass = document.getElementById("select-timetable-class")?.value || "一化甲";
         const sched = MASTER_SCHEDULE[selectedClass] || {};
         const classWeeklyPeriods = { "一化甲": 40, "一化乙": 40, "二化甲": 40, "二化乙": 40, "三化甲": 40, "三化乙": 40 };
 
@@ -2559,9 +2559,7 @@ function renderTimetableGrid() {
             html += `<tr class="hover:bg-slate-50"><td class="p-3 border border-slate-200 font-black bg-slate-50">第 ${p} 節<br><span class="text-xs text-slate-400 font-normal">${PERIOD_TIMES[p]}</span></td>`;
             weekdays.forEach(day => {
                 const slot = sched[day]?.[p];
-                weekdays.forEach(day => {
-                const slot = sched[day]?.[p];
-                if (slot) { // 👈 直接改為 if (slot)，不再阻擋週三下午
+                if (slot) {
                     const encodedTeacher = encodeInlineValue(slot.t);
                     html += `
                         <td class="p-3 border border-slate-200">
@@ -2578,7 +2576,6 @@ function renderTimetableGrid() {
         tbody.innerHTML = html;
     }
 }
-
 // ---------------------- 備查表 (列印/PDF) 模組 ----------------------
 
 function uniquePrintRecords_(records) {
