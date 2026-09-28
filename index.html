@@ -1,0 +1,2971 @@
+<!DOCTYPE html>
+<html lang="zh-TW" class="h-full bg-slate-50">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <title>本校 教學正常化與走廊巡堂系統</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;600;700;900&display=swap" rel="stylesheet">
+    <style>
+        /* 全局最小字體不小於 16px (12pt) */
+        html, body { 
+            font-family: 'Noto Sans TC', sans-serif; 
+            font-size: 16px !important; 
+            -webkit-tap-highlight-color: transparent;
+            line-height: 1.5;
+        }
+
+        /* 表單控制項字體不小於 16px (防止行動端放大) */
+        input, select, textarea, button {
+            font-size: 16px !important;
+        }
+
+        select {
+            min-width: 0;
+            max-width: 100%;
+            width: 100%;
+        }
+
+        select option { white-space: normal; }
+        .select-readable-text { display:block; min-height:1.25rem; color:#334155; font-size:.8rem; line-height:1.35; overflow-wrap:anywhere; }
+        button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-visible { outline:3px solid #f59e0b; outline-offset:2px; }
+        .history-table-wrap { overflow-x:auto; }
+        .history-table th, .history-table td { vertical-align:top; }
+        @media (max-width: 639px) {
+            .history-table-wrap { overflow:visible; border:0; box-shadow:none; }
+            .history-table thead { display:none; }
+            .history-table, .history-table tbody, .history-table tr, .history-table td { display:block; width:100%; }
+            .history-table tr { margin:0 0 .75rem; border:1px solid #cbd5e1; border-radius:1rem; background:#fff; box-shadow:0 1px 2px rgba(15,23,42,.06); overflow:hidden; }
+            .history-table td { display:grid; grid-template-columns:7.5rem minmax(0,1fr); gap:.5rem; padding:.65rem .75rem; border-bottom:1px solid #e2e8f0; text-align:left; }
+            .history-table td:last-child { border-bottom:0; }
+            .history-table td::before { content:attr(data-label); color:#475569; font-weight:900; }
+            .history-table td[data-label="操作"] { grid-template-columns:1fr; text-align:right; }
+            .history-table td[data-label="操作"]::before { display:none; }
+            #timetable-class-selector-wrap, #timetable-teacher-selector-wrap { width:100%; align-items:flex-start; }
+            #timetable-class-selector-wrap select, #timetable-teacher-selector-wrap select, #select-print-session { width:100%; min-width:0; }
+            #select-print-session { max-width:none; }
+        }
+
+        .app-header-row,
+        .app-brand,
+        .app-brand-copy,
+        .batch-card-heading-copy {
+            min-width: 0;
+        }
+
+        .batch-cards-grid {
+            display: grid;
+            grid-template-columns: minmax(0, 1fr);
+        }
+
+        .batch-card-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: .75rem;
+        }
+        .batch-card-header > .batch-card-identity {
+            display: flex;
+            align-items: center;
+            gap: .625rem;
+            flex: 1 1 auto;
+            min-width: 0;
+        }
+        .batch-card-identity > .batch-class-badge {
+            flex: 0 0 auto;
+            white-space: nowrap;
+        }
+        .batch-card-identity > .batch-card-heading-copy {
+            flex: 1 1 auto;
+            min-width: 0;
+            overflow-wrap: anywhere;
+        }
+
+        .batch-quick-fields,
+        .batch-detail-fields {
+            display: grid;
+            grid-template-columns: minmax(0, 1fr);
+        }
+
+        @media (min-width: 640px) {
+            .batch-quick-fields,
+            .batch-detail-fields {
+                grid-template-columns: repeat(2, minmax(0, 1fr));
+            }
+
+            .batch-location-field {
+                grid-column: 1 / -1;
+            }
+        }
+
+        @media (min-width: 1024px) {
+            .batch-quick-fields {
+                grid-template-columns: minmax(0, .8fr) minmax(0, 1.2fr) minmax(0, 1fr);
+            }
+
+            .batch-location-field {
+                grid-column: auto;
+            }
+        }
+
+        @media (min-width: 1280px) {
+            .batch-cards-grid {
+                grid-template-columns: repeat(2, minmax(0, 1fr));
+            }
+        }
+
+        @media (max-width: 639px) {
+            .safe-bottom {
+                padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 5.5rem) !important;
+            }
+
+            .mobile-action-bar {
+                padding-bottom: calc(.75rem + env(safe-area-inset-bottom, 0px));
+            }
+
+            body.mobile-input-active #mobile-action-bar {
+                display: none !important;
+            }
+            #batch-cards-container input,
+            #batch-cards-container textarea {
+                scroll-margin-block: 10rem;
+            }
+
+            .app-header-row {
+                min-height: 4.75rem;
+                height: auto;
+                padding-top: .55rem;
+                padding-bottom: .55rem;
+                align-items: flex-start;
+                gap: .5rem;
+            }
+
+            .app-brand {
+                gap: .55rem;
+                flex: 1 1 auto;
+            }
+
+            .app-brand-icon {
+                flex: 0 0 auto;
+                padding: .5rem;
+            }
+
+            .app-brand-title {
+                display: grid;
+                grid-template-columns: minmax(0, 1fr) auto;
+                gap: .35rem;
+                align-items: start;
+                font-size: .95rem !important;
+                letter-spacing: 0;
+            }
+
+            .app-brand-title-main {
+                line-height: 1.25;
+            }
+
+            .app-brand-subtitle {
+                display: none;
+            }
+
+            .app-sync-button {
+                flex: 0 0 auto;
+                padding: .6rem;
+            }
+
+            .app-sync-label {
+                display: none;
+            }
+
+            .app-tabs-wrap {
+                top: 4.75rem;
+            }
+
+            #nav-tabs {
+                scroll-snap-type: x proximity;
+                gap: .25rem;
+            }
+
+            #nav-tabs .tab-btn {
+                scroll-snap-align: start;
+                padding-left: .75rem;
+                padding-right: .75rem;
+            }
+
+            .batch-card-header {
+                flex-direction: column;
+                align-items: stretch;
+                gap: .65rem;
+            }
+
+            .batch-card-header > .batch-card-identity {
+                width: 100%;
+            }
+
+            .batch-card-details-button {
+                width: 100%;
+                flex: 0 0 auto;
+                justify-content: center;
+            }
+
+            .mobile-save-long-label {
+                display: none;
+            }
+
+            .mobile-save-short-label {
+                display: inline;
+            }
+        }
+
+        @media (min-width: 640px) {
+            .mobile-save-short-label {
+                display: none;
+            }
+        }
+
+        .safe-bottom {
+            padding-bottom: 1.5rem;
+        }
+        .touch-scroll {
+            -webkit-overflow-scrolling: touch;
+        }
+        .no-scrollbar::-webkit-scrollbar {
+            display: none;
+        }
+        .no-scrollbar {
+            -ms-overflow-style: none;
+            scrollbar-width: none;
+        }
+        @page {
+            size: A4 portrait;
+            margin: 8mm;
+        }
+        @media print {
+            .no-print { display: none !important; }
+            .print-only { display: block !important; }
+            body { 
+                background: white !important; 
+                color: black !important; 
+                margin: 0 !important; 
+                padding: 0 !important;
+                font-size: 10.5pt !important;
+            }
+            #printable-audit-area {
+                width: 100% !important;
+                max-width: 100% !important;
+                margin: 0 auto !important;
+                padding: 0 !important;
+                border: none !important;
+                box-shadow: none !important;
+            }
+            table.solid-audit-table {
+                width: 100% !important;
+                page-break-inside: auto;
+            }
+            table.solid-audit-table tr {
+                page-break-inside: avoid !important;
+                break-inside: avoid !important;
+            }
+            table.solid-audit-table thead {
+                display: table-header-group !important;
+            }
+            table.solid-audit-table tfoot {
+                display: table-footer-group !important;
+                page-break-inside: avoid !important;
+                break-inside: avoid !important;
+            }
+        }
+        .print-only { display: none; }
+        
+        .solid-audit-table {
+            border: 1.5px solid #0f172a !important;
+            border-collapse: collapse !important;
+            width: 100% !important;
+            table-layout: fixed !important;
+        }
+        .solid-audit-table th, .solid-audit-table td {
+            border: 1px solid #0f172a !important;
+            word-wrap: break-word !important;
+            overflow-wrap: break-word !important;
+            white-space: normal !important;
+            box-sizing: border-box !important;
+        }
+        .a4-paper-preview {
+            width: 100%;
+            max-width: 820px;
+            background-color: #ffffff;
+            margin-left: auto;
+            margin-right: auto;
+            box-sizing: border-box;
+        }
+    </style>
+</head>
+<body class="h-full flex flex-col text-slate-800 safe-bottom text-base">
+
+<!-- Header Navigation -->
+<header class="no-print bg-slate-900 text-white shadow-md sticky top-0 z-50">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div class="app-header-row flex items-center justify-between h-16 sm:h-20">
+            <div class="app-brand flex items-center space-x-3">
+                <div class="app-brand-icon bg-blue-600 p-2 sm:p-2.5 rounded-xl text-white shadow">
+                    <i data-lucide="clipboard-check" class="w-6 h-6 sm:w-7 sm:h-7"></i>
+                </div>
+                <div class="app-brand-copy">
+                    <h1 class="app-brand-title font-black text-base sm:text-xl leading-tight tracking-wide flex items-center space-x-2">
+                        <span class="app-brand-title-main"><span id="app-school-name">本校</span> 走廊巡堂系統</span>
+                        <span id="current-semester-badge" class="bg-blue-800 text-blue-200 text-sm px-2.5 py-0.5 rounded font-bold whitespace-nowrap">載入中...</span>
+                    </h1>
+                    <p class="app-brand-subtitle text-xs sm:text-sm text-slate-400 mt-0.5">教學正常化與走廊巡查紀錄雲端共用系統</p>
+                </div>
+            </div>
+            
+            <div class="flex items-center space-x-2">
+                <button type="button" onclick="loadAllSystemData(true)" class="app-sync-button bg-slate-800 hover:bg-slate-700 text-slate-100 border border-slate-700 text-sm sm:text-base font-bold px-3 py-2 rounded-xl transition shadow flex items-center space-x-1.5" aria-label="同步試算表" title="同步試算表">
+                    <i data-lucide="refresh-cw" class="w-4 h-4 text-blue-400" id="refresh-icon"></i>
+                    <span class="app-sync-label">同步試算表</span>
+                </button>
+            </div>
+        </div>
+    </div>
+</header>
+
+<!-- Main Navigation Tabs -->
+<div class="app-tabs-wrap no-print bg-white border-b border-slate-200 shadow-xs sticky top-16 sm:top-20 z-40">
+    <div class="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8">
+        <nav class="flex space-x-2 sm:space-x-8 overflow-x-auto touch-scroll no-scrollbar py-2" id="nav-tabs">
+            <button onclick="switchTab('new-record')" id="tab-btn-new-record" class="tab-btn active border-blue-600 text-blue-600 border-b-2 font-black px-3.5 py-2 text-base sm:text-lg whitespace-nowrap flex items-center space-x-2">
+                <i data-lucide="zap" class="w-5 h-5 text-amber-500"></i>
+                <span>一鍵巡查全班</span>
+            </button>
+            <button onclick="switchTab('history')" id="tab-btn-history" class="tab-btn border-transparent text-slate-600 hover:text-slate-900 font-bold px-3.5 py-2 text-base sm:text-lg whitespace-nowrap flex items-center space-x-2">
+                <i data-lucide="list-checks" class="w-5 h-5"></i>
+                <span>歷史紀錄</span>
+                <span id="record-count-badge" class="bg-slate-200 text-slate-800 text-xs px-2 py-0.5 rounded-full font-black">0</span>
+            </button>
+            <button onclick="switchTab('dashboard')" id="tab-btn-dashboard" class="tab-btn border-transparent text-slate-600 hover:text-slate-900 font-bold px-3.5 py-2 text-base sm:text-lg whitespace-nowrap flex items-center space-x-2">
+                <i data-lucide="bar-chart-3" class="w-5 h-5"></i>
+                <span>統計看板</span>
+            </button>
+            <button onclick="switchTab('timetable')" id="tab-btn-timetable" class="tab-btn border-transparent text-slate-600 hover:text-slate-900 font-bold px-3.5 py-2 text-base sm:text-lg whitespace-nowrap flex items-center space-x-2">
+                <i data-lucide="calendar" class="w-5 h-5"></i>
+                <span>總課表速查</span>
+            </button>
+            <button onclick="switchTab('print-report')" id="tab-btn-print-report" class="tab-btn border-transparent text-slate-600 hover:text-slate-900 font-bold px-3.5 py-2 text-base sm:text-lg whitespace-nowrap flex items-center space-x-2">
+                <i data-lucide="printer" class="w-5 h-5"></i>
+                <span>備查表 (列印/PDF)</span>
+            </button>
+            <button onclick="switchTab('settings')" id="tab-btn-settings" class="tab-btn border-transparent text-slate-600 hover:text-slate-900 font-bold px-3.5 py-2 text-base sm:text-lg whitespace-nowrap flex items-center space-x-2">
+                <i data-lucide="settings" class="w-5 h-5 text-indigo-500"></i>
+                <span>學期與課表管理</span>
+            </button>
+        </nav>
+    </div>
+</div>
+
+<!-- Toast -->
+<div id="toast-message" class="fixed bottom-24 sm:bottom-8 right-4 sm:right-8 z-50 max-w-[calc(100vw-2rem)] transform translate-y-20 opacity-0 transition-all duration-300 pointer-events-none bg-slate-900 text-white px-5 py-3.5 rounded-2xl shadow-2xl flex items-center space-x-3 border border-slate-700 text-base font-bold">
+    <div id="toast-icon" class="text-emerald-400 font-black text-xl">✓</div>
+    <div id="toast-text">已完成操作</div>
+</div>
+
+<!-- Modal -->
+<div id="modal-container" class="fixed inset-0 bg-black/50 z-50 hidden items-center justify-center p-4" role="dialog" aria-modal="true" aria-labelledby="modal-title">
+    <div class="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl space-y-4">
+        <h3 id="modal-title" class="text-lg font-black text-slate-900">確認操作</h3>
+        <p id="modal-message" class="text-base text-slate-600">確定要執行此操作嗎？</p>
+        <div class="flex items-center justify-end space-x-3 pt-3">
+            <button type="button" onclick="closeModal(false)" class="px-4 py-2 border border-slate-300 text-slate-700 rounded-xl text-base font-bold hover:bg-slate-100">取消</button>
+            <button type="button" id="modal-confirm-btn" onclick="closeModal(true)" class="px-5 py-2 bg-blue-600 text-white rounded-xl text-base font-black hover:bg-blue-700 shadow">確認</button>
+        </div>
+    </div>
+</div>
+
+<!-- Teacher Timetable Modal Dialog -->
+<div id="teacher-timetable-modal" class="fixed inset-0 bg-black/60 z-50 hidden items-center justify-center p-3 sm:p-4 backdrop-blur-xs" role="dialog" aria-modal="true" aria-labelledby="modal-teacher-name">
+    <div class="bg-white rounded-2xl max-w-4xl w-full p-5 sm:p-6 shadow-2xl space-y-4 border border-slate-200 animate-in fade-in zoom-in-95 duration-200 max-h-[95vh] flex flex-col">
+        <div class="flex items-start justify-between border-b border-slate-200 pb-3">
+            <div class="flex items-center space-x-3">
+                <div class="p-2.5 bg-blue-100 text-blue-800 rounded-xl">
+                    <i data-lucide="calendar-check" class="w-6 h-6"></i>
+                </div>
+                <div>
+                    <div class="flex items-center space-x-2">
+                        <h3 id="modal-teacher-name" class="text-base sm:text-xl font-black text-slate-900">教師課表速查</h3>
+                        <span id="modal-teacher-badge" class="bg-blue-100 text-blue-800 text-sm px-2.5 py-0.5 rounded font-bold">每週 0 節</span>
+                    </div>
+                    <p id="modal-teacher-desc" class="text-xs sm:text-sm text-slate-500 mt-0.5">專任／導師個人一週授課時間表</p>
+                </div>
+            </div>
+            <button type="button" onclick="closeTeacherModal()" class="text-slate-400 hover:text-slate-600 p-1.5 rounded-lg transition" aria-label="關閉教師課表">
+                <i data-lucide="x" class="w-6 h-6"></i>
+            </button>
+        </div>
+
+        <!-- Class Breakdown Pills -->
+        <div id="modal-teacher-breakdown" class="flex flex-wrap gap-1.5 text-sm">
+            <!-- Populated dynamically -->
+        </div>
+
+        <!-- Timetable Table -->
+        <div class="overflow-x-auto border border-slate-200 rounded-xl flex-1">
+            <table class="w-full text-sm sm:text-base border-collapse text-center">
+                <thead>
+                    <tr class="bg-blue-900 text-white font-bold">
+                        <th class="p-2.5 border border-blue-800 w-28">節次 / 時間</th>
+                        <th class="p-2.5 border border-blue-800">星期一</th>
+                        <th class="p-2.5 border border-blue-800">星期二</th>
+                        <th class="p-2.5 border border-blue-800">星期三 </th>
+                        <th class="p-2.5 border border-blue-800">星期四</th>
+                        <th class="p-2.5 border border-blue-800">星期五</th>
+                    </tr>
+                </thead>
+                <tbody id="modal-teacher-table-body" class="divide-y divide-slate-200">
+                    <!-- Populated dynamically -->
+                </tbody>
+            </table>
+        </div>
+
+        <div class="flex items-center justify-between pt-2 border-t border-slate-200 text-xs sm:text-sm text-slate-500">
+            <span>※ 即時對齊當前學期總課表排定資料。</span>
+            <button type="button" onclick="closeTeacherModal()" class="px-5 py-2 bg-slate-800 hover:bg-slate-700 text-white font-bold rounded-xl transition shadow">
+                關閉
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- Main Container -->
+<main class="flex-1 max-w-7xl w-full mx-auto px-3 sm:px-6 lg:px-8 py-4 sm:py-6">
+
+    <!-- TAB 1: Fast Batch Inspection -->
+    <section id="tab-content-new-record" class="tab-content space-y-4 sm:space-y-6">
+        <div class="bg-white rounded-2xl shadow-xs border border-slate-200 overflow-hidden">
+            <div class="bg-gradient-to-r from-blue-700 via-indigo-700 to-slate-800 text-white p-4 sm:p-6">
+                <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                    <div>
+                        <h2 class="text-lg sm:text-2xl font-black flex items-center space-x-2.5">
+                            <i data-lucide="zap" class="w-6 h-6 text-amber-400"></i>
+                            <span>一鍵批次巡查全校各班</span>
+                        </h2>
+                        <p class="text-blue-100 text-sm sm:text-base mt-1.5">選定職稱與節次，自動對齊當前學期總課表。全校週三下午半天放學免巡查並設防呆。</p>
+                    </div>
+                    <button type="button" onclick="quickSetAllNormal()" class="hidden sm:flex bg-amber-400 hover:bg-amber-300 text-slate-900 font-black px-5 py-3 rounded-xl text-base shadow transition items-center space-x-2">
+                        <i data-lucide="sparkles" class="w-5 h-5"></i>
+                        <span>⚡ 一鍵全班正常 (專課專授)</span>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Global Inspection Parameters -->
+            <div class="p-4 sm:p-6 bg-slate-50 border-b border-slate-200">
+                <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                    <div>
+                        <label class="block text-sm sm:text-base font-black text-slate-700 mb-1.5">巡查身分職稱 <span class="text-red-500">*</span></label>
+                        <select id="batch-inspector-role" class="w-full bg-white border border-slate-300 rounded-xl p-3 text-base font-bold text-blue-950 focus:ring-2 focus:ring-blue-500">
+                            <!-- Populated dynamically from Google Sheet -->
+                        </select>
+                    </div>
+
+                    <div>
+                        <label class="block text-sm sm:text-base font-black text-slate-700 mb-1.5">巡查日期 <span class="text-red-500">*</span></label>
+                        <input type="date" id="batch-date" onchange="handleBatchDateChange()" class="w-full bg-white border border-slate-300 rounded-xl p-3 text-base font-bold">
+                    </div>
+
+                    <div>
+                        <label class="block text-sm sm:text-base font-black text-slate-700 mb-1.5">星期 (由日期自動判定)</label>
+                        <select id="batch-weekday" onchange="renderBatchCards()" class="w-full bg-slate-100 border border-slate-300 rounded-xl p-3 text-base font-black text-blue-900">
+                            <option value="Mon">星期一</option>
+                            <option value="Tue">星期二</option>
+                            <option value="Wed">星期三</option>
+                            <option value="Thu">星期四</option>
+                            <option value="Fri">星期五</option>
+                        </select>
+                    </div>
+
+                    <div>
+                        <div class="flex items-center justify-between mb-1.5">
+                            <label class="block text-sm sm:text-base font-black text-slate-700">節次 <span class="text-red-500">*</span></label>
+                            <button type="button" onclick="autoDetectCurrentPeriod(true)" class="text-sm text-blue-700 hover:text-blue-900 font-bold flex items-center space-x-1">
+                                <i data-lucide="clock" class="w-4 h-4"></i>
+                                <span>帶入當前節次</span>
+                            </button>
+                        </div>
+                        <select id="batch-period" onchange="renderBatchCards()" class="w-full bg-white border border-slate-300 rounded-xl p-3 text-base font-black text-indigo-950">
+                            <option value="1">第 1 節 (08:00-09:50)</option>
+                            <option value="2">第 2 節 (09:10-10:00)</option>
+                            <option value="3">第 3 節 (10:10-11:00)</option>
+                            <option value="4">第 4 節 (11:10-12:00)</option>
+                            <option value="5">第 5 節 (13:10-14:00)</option>
+                            <option value="6">第 6 節 (14:10-15:00)</option>
+                            <option value="7">第 7 節 (15:10-16:00)</option>
+                            <option value="8">第 8 節 (16:10-17:00)</option>
+
+                        </select>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Cards Grid -->
+            <div class="p-4 sm:p-6 space-y-4">
+                <div class="flex items-center justify-between">
+                    <h3 class="text-base sm:text-lg font-black text-slate-900 flex items-center space-x-2">
+                        <span>現場課務檢核（一甲 ～ 六甲）</span>
+                        <span id="batch-status-indicator" class="text-sm font-bold px-2.5 py-1 rounded-lg bg-blue-100 text-blue-900">載入中...</span>
+                    </h3>
+                </div>
+
+                <div id="batch-cards-container" class="batch-cards-grid gap-4 sm:gap-6">
+                    <!-- Dynamic Class Cards -->
+                </div>
+                <div id="pending-batch-banner" class="hidden rounded-xl border border-amber-300 bg-amber-50 px-4 py-3 text-amber-950" role="status" aria-live="polite"></div>
+
+                <!-- Desktop Action Bar -->
+                <div class="hidden sm:flex pt-6 border-t border-slate-200 items-center justify-between">
+                    <div class="text-sm text-slate-600 flex items-center space-x-2">
+                        <i data-lucide="cloud-upload" class="w-5 h-5 text-blue-600"></i>
+                        <span>按「一鍵儲存」後將批次寫入試算表，若有異常將自動寄信通報權責處室。</span>
+                    </div>
+
+                    <div class="flex items-center space-x-3">
+                        <button type="button" onclick="quickSetAllNormal()" class="px-5 py-3 bg-slate-100 hover:bg-slate-200 text-slate-800 rounded-xl text-base font-black transition flex items-center space-x-2">
+                            <i data-lucide="sparkles" class="w-5 h-5 text-amber-600"></i>
+                            <span>全部設為正常</span>
+                        </button>
+                        <button type="button" id="btn-submit-batch" onclick="submitBatchInspection()" class="px-8 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-base font-black shadow-lg transition flex items-center space-x-2">
+                            <i data-lucide="save" class="w-5 h-5"></i>
+                            <span>💾 一鍵儲存全校巡堂紀錄</span>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- TAB 2: History Table -->
+    <section id="tab-content-history" class="tab-content space-y-4 hidden">
+        <div class="bg-white p-4 sm:p-6 rounded-2xl border border-slate-200 shadow-xs space-y-4">
+            <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                <div>
+                    <h2 class="text-lg sm:text-xl font-black text-slate-900 flex items-center space-x-2">
+                        <i data-lucide="list-checks" class="w-6 h-6 text-blue-600"></i>
+                        <span>歷史巡堂清單</span>
+                    </h2>
+                    <p class="text-sm text-slate-500 mt-1">資料來源為 Google 試算表「巡查紀錄」工作表。</p>
+                </div>
+
+                <div class="flex items-center gap-2">
+                    <button onclick="exportData('csv')" class="px-4 py-2.5 border border-slate-300 hover:bg-slate-50 rounded-xl text-sm sm:text-base font-bold flex items-center space-x-1.5 shadow-xs">
+                        <i data-lucide="download" class="w-4 h-4"></i>
+                        <span>匯出 CSV</span>
+                    </button>
+                    <button onclick="loadAllSystemData(true)" class="px-4 py-2.5 bg-blue-50 text-blue-800 hover:bg-blue-100 rounded-xl text-sm sm:text-base font-bold flex items-center space-x-1.5">
+                        <i data-lucide="refresh-cw" class="w-4 h-4"></i>
+                        <span>重新整理</span>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Filters Bar -->
+            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 bg-slate-50 p-4 rounded-xl border border-slate-200">
+                <div>
+                    <label class="block font-black text-slate-700 text-sm mb-1">關鍵字搜尋</label>
+                    <input type="text" id="filter-keyword" oninput="renderHistoryTable()" placeholder="教師/科目/備註/地點..." class="w-full bg-white border border-slate-300 rounded-lg p-2.5 text-base font-medium">
+                </div>
+                <div>
+                    <label class="block font-black text-slate-700 text-sm mb-1">班級</label>
+                    <select id="filter-class" onchange="renderHistoryTable()" class="w-full bg-white border border-slate-300 rounded-lg p-2.5 text-base font-bold">
+                        <option value="ALL">全部班級</option>
+                        <option value="化工一甲">化工一甲</option>
+                        <option value="化工一乙">化工一乙</option>
+                        <option value="化工二甲">化工二甲</option>
+                        <option value="化工二乙">化工二乙</option>
+                        <option value="化工三甲">化工三甲</option>
+                        <option value="化工三乙">化工三乙</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="block font-black text-slate-700 text-sm mb-1">吻合狀態</label>
+                    <select id="filter-status" onchange="renderHistoryTable()" class="w-full bg-white border border-slate-300 rounded-lg p-2.5 text-base font-bold">
+                        <option value="ALL">全部狀態</option>
+                        <option value="吻合">✅ 完全吻合</option>
+                        <option value="調課">🔄 核備調課</option>
+                        <option value="公假代理">🏥 差假代理</option>
+                        <option value="異常不符">⚠️ 異常不符</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="block font-black text-slate-700 text-sm mb-1">巡查身分職稱</label>
+                    <select id="filter-role" onchange="renderHistoryTable()" class="w-full bg-white border border-slate-300 rounded-lg p-2.5 text-base font-bold">
+                        <!-- Populated dynamically -->
+                    </select>
+                </div>
+            </div>
+
+            <div class="history-table-wrap border border-slate-200 rounded-xl shadow-xs">
+                <table class="history-table w-full text-base text-left text-slate-800">
+                    <thead class="bg-slate-100 uppercase text-slate-700 font-black border-b border-slate-200">
+                        <tr>
+                            <th class="p-3.5">學期/日期</th>
+                            <th class="p-3.5">班級</th>
+                            <th class="p-3.5">巡查職稱</th>
+                            <th class="p-3.5">預定 vs 實授</th>
+                            <th class="p-3.5">狀態</th>
+                            <th class="p-3.5">教學正常化指標檢核</th>
+                            <th class="p-3.5">備註與報修</th>
+                            <th class="p-3.5 text-center">操作</th>
+                        </tr>
+                    </thead>
+                    <tbody id="history-table-body" class="divide-y divide-slate-200">
+                        <!-- Populated dynamically -->
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </section>
+
+    <!-- TAB 3: Dashboard -->
+    <section id="tab-content-dashboard" class="tab-content space-y-4 sm:space-y-6 hidden">
+        <div class="grid grid-cols-2 lg:grid-cols-4 gap-4">
+            <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-xs flex items-center space-x-3.5">
+                <div class="p-3 bg-blue-100 text-blue-800 rounded-2xl"><i data-lucide="file-text" class="w-7 h-7"></i></div>
+                <div>
+                    <span class="text-sm font-bold text-slate-500">總巡堂紀錄</span>
+                    <div id="stat-total-count" class="text-2xl sm:text-3xl font-black text-slate-900">0</div>
+                </div>
+            </div>
+            <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-xs flex items-center space-x-3.5">
+                <div class="p-3 bg-emerald-100 text-emerald-800 rounded-2xl"><i data-lucide="check-circle-2" class="w-7 h-7"></i></div>
+                <div>
+                    <span class="text-sm font-bold text-slate-500">專課專授率</span>
+                    <div id="stat-match-rate" class="text-2xl sm:text-3xl font-black text-emerald-600">100%</div>
+                </div>
+            </div>
+            <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-xs flex items-center space-x-3.5">
+                <div class="p-3 bg-rose-100 text-rose-800 rounded-2xl"><i data-lucide="alert-triangle" class="w-7 h-7"></i></div>
+                <div>
+                    <span class="text-sm font-bold text-slate-500">列管追蹤數</span>
+                    <div id="stat-abnormal-count" class="text-2xl sm:text-3xl font-black text-rose-600">0</div>
+                </div>
+            </div>
+            <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-xs flex items-center space-x-3.5">
+                <div class="p-3 bg-purple-100 text-purple-800 rounded-2xl"><i data-lucide="file-check" class="w-7 h-7"></i></div>
+                <div>
+                    <span class="text-sm font-bold text-slate-500">評量正常率</span>
+                    <div id="stat-exam-rate" class="text-2xl sm:text-3xl font-black text-purple-600">100%</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <div class="bg-white p-5 sm:p-6 rounded-2xl border border-slate-200 shadow-xs space-y-3">
+                <h3 class="text-base sm:text-lg font-black text-slate-800 flex items-center space-x-2">
+                    <i data-lucide="user-check" class="w-5 h-5 text-blue-600"></i>
+                    <span>各身分職稱巡堂次數</span>
+                </h3>
+                <div class="h-64 sm:h-72 flex items-center justify-center">
+                    <canvas id="chart-inspectors"></canvas>
+                </div>
+            </div>
+            <div class="bg-white p-5 sm:p-6 rounded-2xl border border-slate-200 shadow-xs space-y-3">
+                <h3 class="text-base sm:text-lg font-black text-slate-800 flex items-center space-x-2">
+                    <i data-lucide="building-2" class="w-5 h-5 text-emerald-600"></i>
+                    <span>各班巡堂次數</span>
+                </h3>
+                <div class="h-64 sm:h-72 flex items-center justify-center">
+                    <canvas id="chart-classes"></canvas>
+                </div>
+            </div>
+            <div class="bg-white p-5 sm:p-6 rounded-2xl border border-slate-200 shadow-xs space-y-3">
+                <h3 class="text-base sm:text-lg font-black text-slate-800 flex items-center space-x-2">
+                    <i data-lucide="radar" class="w-5 h-5 text-emerald-500"></i>
+                    <span>教學正常化指標雷達</span>
+                </h3>
+                <div class="h-64 sm:h-72 flex items-center justify-center">
+                    <canvas id="chart-evaluation"></canvas>
+                </div>
+            </div>
+            <div class="bg-white p-5 sm:p-6 rounded-2xl border border-slate-200 shadow-xs space-y-3">
+                <h3 class="text-base sm:text-lg font-black text-slate-800 flex items-center space-x-2">
+                    <i data-lucide="pie-chart" class="w-5 h-5 text-purple-600"></i>
+                    <span>課務吻合狀態占比</span>
+                </h3>
+                <div class="h-64 sm:h-72 flex items-center justify-center">
+                    <canvas id="chart-status"></canvas>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- TAB 4: Timetable & Teacher Lookup -->
+    <section id="tab-content-timetable" class="tab-content space-y-4 hidden">
+        <div class="bg-white p-5 sm:p-6 rounded-2xl border border-slate-200 shadow-xs space-y-4">
+            <div class="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+                <div>
+                    <h2 class="text-lg sm:text-xl font-black text-slate-900 flex items-center space-x-2">
+                        <i data-lucide="calendar" class="w-6 h-6 text-blue-600"></i>
+                        <span>總課表與教師課表速查</span>
+                    </h2>
+                    <p class="text-sm text-slate-500 mt-1">巡查人員比對專課專授專用，支援切換「班級課表」或「個別教師課表」速查。</p>
+                </div>
+
+                <div class="flex flex-wrap items-center gap-2.5">
+                    <!-- Mode Switch Buttons -->
+                    <div class="inline-flex rounded-xl border border-slate-300 p-1 bg-slate-100 text-sm sm:text-base font-bold">
+                        <button type="button" id="tt-mode-btn-class" onclick="setTimetableMode('class')" class="px-3.5 py-1.5 rounded-lg bg-blue-600 text-white shadow-xs transition">
+                            🏫 班級課表
+                        </button>
+                        <button type="button" id="tt-mode-btn-teacher" onclick="setTimetableMode('teacher')" class="px-3.5 py-1.5 rounded-lg text-slate-600 hover:text-slate-900 transition">
+                            👨‍🏫 教師課表
+                        </button>
+                    </div>
+
+                    <!-- Class Selector -->
+                    <div id="timetable-class-selector-wrap" class="flex items-center space-x-2">
+                        <span class="text-sm font-black text-slate-700">班級：</span>
+                        <select id="select-timetable-class" onchange="renderTimetableGrid()" class="bg-white border border-slate-300 rounded-xl px-4 py-2 text-base font-black text-blue-900 shadow-xs">
+                            <option value="一化甲">化工一甲 (一化甲)</option>
+                            <option value="一化乙">化工一乙 (一化乙)</option>
+                            <option value="二化甲">化工二甲 (二化甲)</option>
+                            <option value="二化乙">化工二乙 (二化乙)</option>
+                            <option value="三化甲">化工三甲 (三化甲)</option>
+                            <option value="三化乙">化工三乙 (三化乙)</option>
+                        </select>
+                    </div>
+
+                    <!-- Teacher Selector -->
+                    <div id="timetable-teacher-selector-wrap" class="hidden flex items-center space-x-2">
+                        <span class="text-sm font-black text-slate-700">教師：</span>
+                        <select id="select-timetable-teacher" onchange="renderTimetableGrid()" class="bg-white border border-slate-300 rounded-xl px-4 py-2 text-base font-black text-indigo-900 shadow-xs">
+                            <!-- Populated dynamically via JS -->
+                        </select>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Current Schedule Header Notice -->
+            <div id="timetable-current-title-badge" class="bg-blue-50 border border-blue-200 rounded-xl p-3 flex items-center justify-between text-sm sm:text-base">
+                <span class="font-black text-blue-950 flex items-center space-x-2">
+                    <i data-lucide="info" class="w-5 h-5 text-blue-600"></i>
+                    <span id="timetable-view-label">化工三甲 (三化甲) 週課表</span>
+                </span>
+                <span id="timetable-sub-badge" class="text-blue-800 bg-white px-2.5 py-0.5 rounded-lg border border-blue-200 font-bold text-xs sm:text-sm">全週 40 節</span>
+            </div>
+
+            <div class="overflow-x-auto border border-slate-200 rounded-xl">
+                <table class="w-full text-base border-collapse text-center">
+                    <thead>
+                        <tr class="bg-blue-900 text-white font-black text-base">
+                            <th class="p-3 border border-blue-800 w-28">節次 / 時間</th>
+                            <th class="p-3 border border-blue-800">星期一</th>
+                            <th class="p-3 border border-blue-800">星期二</th>
+                            <th class="p-3 border border-blue-800">星期三 </th>
+                            <th class="p-3 border border-blue-800">星期四</th>
+                            <th class="p-3 border border-blue-800">星期五</th>
+                        </tr>
+                    </thead>
+                    <tbody id="timetable-grid-body" class="divide-y divide-slate-200">
+                        <!-- Populated dynamically via JS -->
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- Teachers Quick Reference (Clickable cards to view schedule) -->
+            <div class="mt-6 pt-4 border-t border-slate-200 space-y-3">
+                <div class="flex items-center justify-between">
+                    <h4 class="text-sm sm:text-base font-black text-slate-800 flex items-center space-x-2">
+                        <i data-lucide="users" class="w-5 h-5 text-blue-600"></i>
+                        <span>全校專兼任與導師名單速查（點擊任一卡片可直接檢視該師個人一週課表）</span>
+                    </h4>
+                    <span class="text-xs sm:text-sm text-blue-600 font-bold hidden sm:inline">👆 點擊教師卡片彈出課表</span>
+                </div>
+                <div id="teachers-quick-list-container" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-7 gap-2.5 text-sm">
+                    <!-- Populated dynamically via JS -->
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- TAB 5: Printable Audit Form -->
+    <section id="tab-content-print-report" class="tab-content space-y-4 hidden">
+        <div class="no-print bg-white p-5 sm:p-6 rounded-2xl border border-slate-200 shadow-xs space-y-4">
+            <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                <div>
+                    <h2 class="text-base sm:text-lg font-black text-slate-900">巡堂紀錄公文備查表 (A4 單頁直出)</h2>
+                    <p class="text-sm text-slate-500 mt-1">標準公文備查表格式，已最佳化為單頁 A4 比例，製表日期自動對齊巡查日期。</p>
+                </div>
+                <div class="flex flex-wrap items-center gap-2.5">
+                    <div class="flex items-center space-x-1.5 bg-slate-100 p-1.5 rounded-xl text-sm font-bold text-slate-700">
+                        <span class="text-slate-500 pl-1">排版：</span>
+                        <select id="print-density-select" onchange="changePrintDensity(this.value)" class="bg-white border border-slate-300 rounded-lg px-2.5 py-1 text-sm font-black text-blue-900">
+                            <option value="auto" selected>✨ 自動縮放單張 A4</option>
+                            <option value="normal">標準排版 (100%)</option>
+                            <option value="compact">緊湊排版 (85%)</option>
+                            <option value="super-compact">超緊湊 (多筆縮放 75%)</option>
+                        </select>
+                    </div>
+                    <button type="button" onclick="exportReportToPDF()" class="px-5 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-base font-black shadow transition flex items-center space-x-2">
+                        <i data-lucide="file-down" class="w-5 h-5"></i>
+                        <span>輸出 PDF 檔</span>
+                    </button>
+                    <button type="button" onclick="triggerDirectPrint()" class="px-5 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-800 rounded-xl text-base font-bold transition flex items-center space-x-2">
+                        <i data-lucide="printer" class="w-5 h-5"></i>
+                        <span>列印 / 預覽</span>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Print Scope Checkbox Selector -->
+            <div class="bg-slate-50 p-4 rounded-xl border border-slate-200 space-y-3">
+                <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                    <div class="flex items-center space-x-2">
+                        <span class="text-sm font-black text-slate-700 flex items-center space-x-1.5">
+                            <i data-lucide="filter" class="w-4 h-4 text-blue-600"></i>
+                            <span>選擇巡堂時段：</span>
+                        </span>
+                        <select id="select-print-session" onchange="handleSelectPrintSession(this.value)" class="bg-white border border-slate-300 rounded-xl px-3 py-1.5 text-base font-bold text-slate-800">
+                            <!-- Populated dynamically -->
+                        </select>
+                    </div>
+
+                    <div class="flex items-center space-x-2 text-sm">
+                        <span class="text-slate-500 font-bold">（目前勾選 <span id="print-selected-count" class="text-blue-600 font-black">0</span> 班）</span>
+                        <button type="button" onclick="selectAllCurrentSession(true)" class="text-blue-600 hover:underline font-black">全選此節</button>
+                        <span class="text-slate-300">|</span>
+                        <button type="button" onclick="selectAllCurrentSession(false)" class="text-slate-500 hover:underline font-bold">取消全選</button>
+                    </div>
+                </div>
+
+                <div id="print-scope-checkboxes" class="flex flex-wrap gap-2 pt-1 text-sm">
+                    <!-- Checkboxes populated dynamically -->
+                </div>
+            </div>
+        </div>
+
+        <!-- A4 Printable Area -->
+        <div id="printable-audit-area" class="a4-paper-preview p-6 sm:p-10 rounded-2xl border border-slate-300 shadow-xs print:shadow-none print:border-none print:p-0">
+            <div class="text-center pb-3 mb-2">
+                <h1 class="text-xl sm:text-2xl font-black text-slate-900 tracking-wider"><span id="print-school-name">本校</span> <span id="print-header-sem">115-1</span></h1>
+                <h2 class="text-base sm:text-lg font-bold text-slate-700 mt-1">教學正常化與走廊巡堂紀錄備查表</h2>
+            </div>
+
+            <div class="flex justify-between items-center text-xs sm:text-sm text-slate-800 mb-3 font-bold px-1">
+                <span id="print-header-session" class="text-blue-950">巡查時段：--</span>
+                <span id="print-header-inspector" class="text-indigo-950">巡堂人員：--</span>
+                <span id="print-header-report-date">製表日期：--</span>
+            </div>
+
+            <table class="solid-audit-table w-full text-xs sm:text-sm border-collapse">
+                <thead>
+                    <tr class="bg-slate-100 font-black text-center text-slate-800">
+                        <th class="p-2 w-[14%]">巡堂日期/節次</th>
+                        <th class="p-2 w-[8%]">班級</th>
+                        <th class="p-2 w-[16%]">預定科目/教師</th>
+                        <th class="p-2 w-[17%]">實授現場/狀態</th>
+                        <th class="p-2 w-[23%]">教學正常化指標檢核</th>
+                        <th class="p-2 w-[22%]">優良事實與備註建議</th>
+                    </tr>
+                </thead>
+                <tbody id="print-table-body">
+                    <!-- Populated dynamically -->
+                </tbody>
+                <tfoot>
+                    <tr class="bg-slate-50 text-center font-black">
+                        <td colspan="2" class="p-2">教學組長</td>
+                        <td colspan="2" class="p-2">教導主任</td>
+                        <td colspan="2" class="p-2">校長</td>
+                    </tr>
+                    <tr class="h-16 text-center">
+                        <td colspan="2" class="p-1 align-bottom text-slate-400 text-xs">（簽章）</td>
+                        <td colspan="2" class="p-1 align-bottom text-slate-400 text-xs">（簽章）</td>
+                        <td colspan="2" class="p-1 align-bottom text-slate-400 text-xs">（簽章）</td>
+                    </tr>
+                </tfoot>
+            </table>
+        </div>
+    </section>
+
+    <!-- TAB 6: Semester & Timetable Management -->
+    <section id="tab-content-settings" class="tab-content space-y-4 sm:space-y-6 hidden">
+        <div class="bg-white p-5 sm:p-6 rounded-2xl border border-slate-200 shadow-xs space-y-4">
+            <h3 class="text-base sm:text-lg font-black text-slate-900 flex items-center space-x-2">
+                <i data-lucide="calendar-plus" class="w-6 h-6 text-blue-600"></i>
+                <span>學期管理與當前啟用學期切換</span>
+            </h3>
+            
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div class="bg-slate-50 p-4 rounded-xl border border-slate-200 space-y-2.5">
+                    <label class="block font-black text-slate-800 text-base">當前系統啟用學期：</label>
+                    <div class="flex items-center space-x-2">
+                        <select id="select-active-semester" class="flex-1 bg-white border border-slate-300 rounded-xl p-3 text-base font-black text-blue-900">
+                            <!-- Populated dynamically -->
+                        </select>
+                        <button type="button" onclick="confirmSwitchActiveSemester()" class="px-5 py-3 bg-blue-600 hover:bg-blue-700 text-white font-black rounded-xl shadow-xs text-base">
+                            套用啟用
+                        </button>
+                    </div>
+                    <p class="text-xs sm:text-sm text-slate-500">切換後，巡堂檢核、歷史紀錄與課表將切換至該學期資料。</p>
+                </div>
+
+                <div class="bg-slate-50 p-4 rounded-xl border border-slate-200 space-y-2.5">
+                    <label class="block font-black text-slate-800 text-base">新增學期：</label>
+                    <div class="flex flex-wrap items-center gap-2">
+                        <input type="text" id="new-semester-code" placeholder="代碼如 115-2" class="w-36 min-w-0 max-w-full bg-white border border-slate-300 rounded-xl p-3 text-base font-black">
+                        <input type="text" id="new-semester-name" placeholder="名稱如 115學年度第二學期" class="flex-1 min-w-0 basis-48 bg-white border border-slate-300 rounded-xl p-3 text-base font-bold">
+                        <button type="button" onclick="handleCreateSemester()" class="px-5 py-3 bg-emerald-600 hover:bg-emerald-700 text-white font-black rounded-xl shadow-xs whitespace-nowrap text-base">
+                            新增學期
+                        </button>
+                    </div>
+                    <p class="text-xs sm:text-sm text-slate-500">建立後即可在下方為新學期匯入專屬的全校總課表。</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Timetable CSV Import -->
+        <div class="bg-white p-5 sm:p-6 rounded-2xl border border-slate-200 shadow-xs space-y-4">
+            <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                <div>
+                    <h3 class="text-base sm:text-lg font-black text-slate-900 flex items-center space-x-2">
+                        <i data-lucide="file-up" class="w-6 h-6 text-emerald-600"></i>
+                        <span>匯入全校總課表 (對齊 PDF 矩陣格式 CSV)</span>
+                    </h3>
+                    <p class="text-xs sm:text-sm text-slate-500 mt-1">直接依照總課表 PDF 格子匯入（將覆蓋目前啟用學期之課表）。</p>
+                </div>
+                <button type="button" onclick="downloadTimetableTemplate()" class="text-sm sm:text-base text-blue-700 hover:underline font-black self-start sm:self-auto flex items-center space-x-1">
+                    <i data-lucide="download" class="w-4 h-4"></i>
+                    <span>下載 PDF 矩陣課表 CSV 範本</span>
+                </button>
+            </div>
+
+            <div class="border-2 border-dashed border-slate-300 rounded-2xl p-6 text-center bg-slate-50 space-y-4">
+                <input type="file" id="timetable-csv-file" accept=".csv" class="text-base text-slate-700 file:mr-4 file:py-2.5 file:px-5 file:rounded-xl file:border-0 file:text-base file:font-black file:bg-blue-600 file:text-white hover:file:bg-blue-700 cursor-pointer">
+                    <div class="flex flex-col sm:flex-row items-stretch sm:items-center justify-center gap-2 pt-2">
+                    <label class="flex items-center gap-2 text-sm font-black text-slate-700">匯入模式
+                        <select id="timetable-import-mode" class="w-full sm:w-auto bg-white border border-slate-300 rounded-lg px-2.5 py-2 text-sm font-black">
+                            <option value="auto">自動判斷</option><option value="class">班級模式</option><option value="teacher">教師模式</option>
+                        </select>
+                    </label>
+                    <button type="button" onclick="handleUploadTimetableCSV()" class="px-6 py-3 bg-emerald-600 hover:bg-emerald-700 text-white text-base font-black rounded-xl shadow-md transition flex items-center space-x-2">
+                        <i data-lucide="upload" class="w-5 h-5"></i>
+                        <span>確認匯入覆蓋該學期課表</span>
+                    </button>
+                </div>
+                <div id="timetable-csv-preview" class="hidden text-left max-w-xl mx-auto rounded-xl border border-blue-200 bg-blue-50 px-4 py-3 text-sm text-blue-900" aria-live="polite"></div>
+                <div class="text-sm text-slate-600 text-left max-w-xl mx-auto bg-white p-4 rounded-xl border border-slate-200 space-y-1.5">
+                    <div class="font-black text-slate-800">💡 矩陣填寫說明（對齊排課 PDF）：</div>
+                    <div>• <b>教師模式：</b>第 1 欄填寫教師（如 001 林雅惠），第 2 欄填星期（Tue），格子填寫「<b>科目/班級</b>」（如：自然/三甲）。</div>
+                    <div>• <b>班級模式：</b>第 1 欄填寫班級（如 一甲），第 2 欄填星期（Mon），格子填寫「<b>科目/教師</b>」（如：數學/005林佳儀）。</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Email Notification Status -->
+        <div class="bg-white p-5 sm:p-6 rounded-2xl border border-slate-200 shadow-xs space-y-4">
+            <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                <div>
+                    <h3 class="text-base sm:text-lg font-black text-slate-900 flex items-center space-x-2">
+                        <i data-lucide="mail-check" class="w-6 h-6 text-emerald-600"></i>
+                        <span>Email 異常通報</span>
+                    </h3>
+                    <p class="text-sm text-slate-500 mt-1">儲存巡堂紀錄時，系統會依異常類型自動寄送，不會在正常紀錄時打擾收件人。</p>
+                </div>
+                <button type="button" onclick="refreshEmailNotificationStatus(true)" class="self-start sm:self-auto px-4 py-2.5 bg-slate-900 hover:bg-slate-800 text-white rounded-xl font-black flex items-center space-x-2">
+                    <i data-lucide="refresh-cw" class="w-4 h-4"></i>
+                    <span>檢查 Email 設定</span>
+                </button>
+            </div>
+
+            <div id="email-notification-status" class="grid grid-cols-1 sm:grid-cols-3 gap-3" aria-live="polite">
+                <div class="rounded-xl border border-slate-200 bg-slate-50 p-4">
+                    <div class="text-sm font-bold text-slate-500">教學異常收件人</div>
+                    <div id="email-teaching-count" class="text-xl font-black text-slate-900 mt-1">檢查中…</div>
+                </div>
+                <div class="rounded-xl border border-slate-200 bg-slate-50 p-4">
+                    <div class="text-sm font-bold text-slate-500">設備報修收件人</div>
+                    <div id="email-repair-count" class="text-xl font-black text-slate-900 mt-1">檢查中…</div>
+                </div>
+                <div class="rounded-xl border border-slate-200 bg-slate-50 p-4">
+                    <div class="text-sm font-bold text-slate-500">今日剩餘寄信額度</div>
+                    <div id="email-quota-count" class="text-xl font-black text-slate-900 mt-1">檢查中…</div>
+                </div>
+            </div>
+            <div id="email-status-message" class="text-sm font-bold rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-slate-600">
+                正在讀取通報設定…
+            </div>
+            <div class="border-t border-slate-200 pt-4 space-y-3">
+                <div class="flex items-center justify-between gap-3">
+                    <h4 class="font-black text-slate-800">Email 寄送摘要</h4>
+                    <button type="button" onclick="loadEmailDeliverySummary(true)" class="px-3 py-2 rounded-lg border border-slate-300 text-sm font-black hover:bg-slate-50">重新整理摘要</button>
+                </div>
+                <div id="email-delivery-summary" class="text-sm rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-slate-600" aria-live="polite">尚未載入寄送摘要。</div>
+                <button type="button" id="btn-retry-email" onclick="retryFailedEmails()" class="hidden px-4 py-2.5 bg-amber-500 hover:bg-amber-600 text-white rounded-xl text-sm font-black">重試失敗通報</button>
+            </div>
+        </div>
+
+        <!-- Google Sheet Dropdown Configuration Instructions -->
+        <div class="bg-white p-5 sm:p-6 rounded-2xl border border-slate-200 shadow-xs space-y-3">
+            <h3 class="text-base sm:text-lg font-black text-slate-900 flex items-center space-x-2">
+                <i data-lucide="sliders-horizontal" class="w-6 h-6 text-blue-600"></i>
+                <span>Google 試算表選單與變數動態管理說明</span>
+            </h3>
+            <div class="text-sm sm:text-base text-slate-700 bg-blue-50/60 p-4 rounded-xl border border-blue-200 space-y-2">
+                <p class="font-black text-blue-950">您可以在綁定的 Google 試算表中的【系統選單設定】工作表直接新增或修改選項：</p>
+                <ul class="list-disc list-inside space-y-1 text-slate-800">
+                    <li><b>巡查身分職稱</b>：可在該欄新增、刪除或修改職稱（如增加「輔導主任」等）。</li>
+                    <li><b>上課地點</b>：可在該欄新增特殊教室或場地（如「圖書館」、「桌球室」等）。</li>
+                    <li><b>學習評量／課堂秩序／環境衛生／資訊科技</b>：各檢核指標可依照學校需求自由微調。</li>
+                    <li><b>通報Email(教學異常)／通報Email(設備報修)</b>：直接填寫自動發信通知之收件人信箱。</li>
+                </ul>
+                <p class="text-xs sm:text-sm text-blue-800 font-bold pt-1">※ 在試算表修改完成後，只需點擊畫面右上方的「同步試算表」按鈕，系統就會立即套用最新選項！</p>
+            </div>
+        </div>
+    </section>
+
+</main>
+
+<!-- Mobile Sticky Bottom Action Bar -->
+<div id="mobile-action-bar" class="mobile-action-bar sm:hidden fixed bottom-0 left-0 right-0 bg-white/95 backdrop-blur-md border-t border-slate-200 p-3 z-40 shadow-xl">
+    <div class="flex items-center space-x-2.5 max-w-lg mx-auto">
+        <button type="button" onclick="quickSetAllNormal()" class="flex-1 py-3 bg-slate-100 active:bg-slate-200 text-slate-900 rounded-xl text-sm sm:text-base font-black transition flex items-center justify-center space-x-1.5">
+            <i data-lucide="sparkles" class="w-4 h-4 text-amber-600"></i>
+            <span>全班正常</span>
+        </button>
+        <button type="button" id="btn-submit-batch-mobile" onclick="submitBatchInspection()" class="flex-[2] py-3 bg-blue-600 active:bg-blue-700 text-white rounded-xl text-base font-black shadow-lg transition flex items-center justify-center space-x-2">
+            <i data-lucide="save" class="w-5 h-5"></i>
+            <span class="mobile-save-long-label">💾 一鍵儲存全校巡堂</span>
+            <span class="mobile-save-short-label">儲存巡堂</span>
+        </button>
+    </div>
+</div>
+
+<script>
+let CURRENT_SEMESTER = "115-1";
+let MASTER_SCHEDULE = {};
+let TEACHERS_LIST = ["代課老師"];
+const CLASSES_LIST = ["一化甲","一化乙", "二化甲","二化乙", "三化甲","三化乙" ];
+
+// 系統選單與下拉變數（由 Google 試算表「系統選單設定」動態載入）
+let SYSTEM_OPTIONS = {
+    inspectorRoles: ["校長", "教導主任", "總務主任", "教學組長", "訓導組長", "導護"],
+    locations: ["原班教室", "多功能教室", "E化教室", "圓形教室", "語言教室", "多元教室", "海涵樓", "育樂中心", "行政大樓", "操場", "籃球場", "其他"],
+    matchStatuses: ["吻合", "調課", "公假代理", "異常不符"],
+    evalExams: ["正常教學無測驗", "隨堂形成性小考", "違規佔用藝能課考試", "跨科違規考試"],
+    evalDisciplines: ["良好", "尚可", "待加強"],
+    evalEnvs: ["良好", "尚可", "待改善"],
+    evalIts: ["觸控大屏/電子白板", "學生平板載具", "簡報/投影機", "板書/傳統教具", "無"],
+    emailStatus: { configured: false, teachingCount: 0, repairCount: 0, invalidCount: 0 },
+    schoolName: "本校"
+};
+
+let SCHOOL_NAME = "本校";
+function getSchoolFileName() {
+    return String(SCHOOL_NAME || "本校").replace(/[/:*?"<>|]/g, "_").trim() || "本校";
+}
+function applySchoolName(name) {
+    SCHOOL_NAME = String(name || "本校").trim() || "本校";
+    document.title = SCHOOL_NAME + " 教學正常化與走廊巡堂系統";
+    const appName = document.getElementById("app-school-name");
+    const printName = document.getElementById("print-school-name");
+    if (appName) appName.textContent = SCHOOL_NAME;
+    if (printName) printName.textContent = SCHOOL_NAME;
+}
+applySchoolName(SCHOOL_NAME);
+
+let inspectionRecords = [];
+let printSelectedIds = new Set();
+let selectedPrintSessionKey = "";
+let currentTimetableMode = "class"; // "class" or "teacher"
+let currentPrintDensity = "auto";
+const BATCH_DRAFT_STORAGE_KEY = "xinxing巡堂.batchDrafts.v1";
+const PENDING_BATCH_STORAGE_KEY = "xinxing巡堂.pendingBatch.v1";
+let batchDraftTouched = false;
+let renderedBatchContext = null;
+let inMemoryDrafts = {};
+let inMemoryPendingBatch = null;
+let batchSubmitInFlight = false;
+const sessionMemory = new Map();
+
+function safeSessionGet(key, fallback) {
+    if (sessionMemory.has(key)) return sessionMemory.get(key) ?? fallback;
+    try { const raw = sessionStorage.getItem(key); return raw ? JSON.parse(raw) : fallback; } catch (e) { return key === PENDING_BATCH_STORAGE_KEY ? (inMemoryPendingBatch || fallback) : (inMemoryDrafts || fallback); }
+}
+function safeSessionSet(key, value) {
+    sessionMemory.set(key, value);
+    try { sessionStorage.setItem(key, JSON.stringify(value)); return true; } catch (e) { if (key === PENDING_BATCH_STORAGE_KEY) inMemoryPendingBatch = value; else inMemoryDrafts = value; return false; }
+}
+function safeSessionRemove(key) { sessionMemory.set(key, null); try { sessionStorage.removeItem(key); } catch (e) {} }
+function batchDraftKey(date, weekday, period, semester = CURRENT_SEMESTER) { return `${semester}|${date}|${weekday}|${period}`; }
+function getBatchContext() {
+    return { semester: CURRENT_SEMESTER, date: document.getElementById("batch-date")?.value || "", weekday: document.getElementById("batch-weekday")?.value || "Wed", period: document.getElementById("batch-period")?.value || "3" };
+}
+function captureBatchDraft() {
+    if (!renderedBatchContext) return;
+    const ctx = renderedBatchContext || getBatchContext();
+    if (!ctx.date || !document.getElementById("batch-cards-container")?.children.length) return;
+    const drafts = safeSessionGet(BATCH_DRAFT_STORAGE_KEY, {});
+    const cards = {};
+    CLASSES_LIST.forEach(cls => {
+        const card = document.getElementById(`batch-card-${cls}`);
+        if (!card) return;
+        cards[cls] = {
+            status: document.querySelector(`input[name="status-${cls}"]:checked`)?.value || "吻合",
+            actualSubject: document.getElementById(`actual-sub-${cls}`)?.value || "",
+            actualTeacher: document.getElementById(`actual-teacher-${cls}`)?.value || "",
+            location: document.getElementById(`actual-location-${cls}`)?.value || "原班教室",
+            evalEnv: document.getElementById(`eval-env-${cls}`)?.value || "良好",
+            evalIt: document.getElementById(`eval-it-${cls}`)?.value || "觸控大屏/電子白板",
+            evalExam: document.getElementById(`eval-exam-${cls}`)?.value || "正常教學無測驗",
+            evalDiscipline: document.getElementById(`eval-discipline-${cls}`)?.value || "良好",
+            subNotes: document.getElementById(`subnotes-${cls}`)?.value || "",
+            praise: document.getElementById(`praise-${cls}`)?.value || "",
+            repair: document.getElementById(`repair-${cls}`)?.value || "",
+            detailsOpen: !document.getElementById(`details-section-${cls}`)?.classList.contains("hidden")
+        };
+    });
+    const key = batchDraftKey(ctx.date, ctx.weekday, ctx.period, ctx.semester);
+    if (JSON.stringify(drafts[key]?.cards) === JSON.stringify(cards)) return;
+    drafts[key] = { context: ctx, cards, updatedAt: Math.max(Date.now(), Number(drafts[key]?.updatedAt || 0) + 1) };
+    safeSessionSet(BATCH_DRAFT_STORAGE_KEY, drafts);
+}
+function clearBatchDraft(context, submittedVersion) {
+    const drafts = safeSessionGet(BATCH_DRAFT_STORAGE_KEY, {});
+    const key = batchDraftKey(context.date, context.weekday, context.period, context.semester);
+    const cleared = submittedVersion == null || !drafts[key] || Number(drafts[key].updatedAt || 0) <= Number(submittedVersion);
+    if (cleared) delete drafts[key];
+    safeSessionSet(BATCH_DRAFT_STORAGE_KEY, drafts);
+    batchDraftTouched = Object.keys(drafts).length > 0;
+    if (cleared && renderedBatchContext && batchDraftKey(renderedBatchContext.date, renderedBatchContext.weekday, renderedBatchContext.period, renderedBatchContext.semester) === key) {
+        renderedBatchContext = null;
+        renderBatchCards();
+    }
+}
+function restoreBatchDraft() {
+    const ctx = getBatchContext();
+    const drafts = safeSessionGet(BATCH_DRAFT_STORAGE_KEY, {});
+    const draft = drafts[batchDraftKey(ctx.date, ctx.weekday, ctx.period)];
+    if (!draft || !draft.cards) return;
+    CLASSES_LIST.forEach(cls => {
+        const d = draft.cards[cls]; if (!d || !document.getElementById(`batch-card-${cls}`)) return;
+        const set = (id, value) => { const el = document.getElementById(id); if (el && value != null) el.value = value; };
+        const radio = Array.from(document.querySelectorAll(`input[name="status-${cls}"]`)).find(el => el.value === (d.status || "吻合")); if (radio) radio.checked = true;
+        set(`actual-sub-${cls}`, d.actualSubject); set(`actual-teacher-${cls}`, d.actualTeacher); set(`actual-location-${cls}`, d.location);
+        set(`eval-env-${cls}`, d.evalEnv); set(`eval-it-${cls}`, d.evalIt); set(`eval-exam-${cls}`, d.evalExam); set(`eval-discipline-${cls}`, d.evalDiscipline);
+        set(`subnotes-${cls}`, d.subNotes); set(`praise-${cls}`, d.praise); set(`repair-${cls}`, d.repair);
+        // 每次載入卡片都展開檢核，既有收合草稿不會隱藏待檢查欄位。
+        setCardDetailsOpen(cls, true);
+        handleClassStatusChange(cls);
+    });
+}
+function renderPendingBatchBanner() {
+    const el = document.getElementById("pending-batch-banner"); if (!el) return;
+    const pending = getPendingBatch();
+    if (!pending || !pending.context) { el.classList.add("hidden"); el.innerHTML = ""; return; }
+    const c = pending.context;
+    el.classList.remove("hidden");
+    el.innerHTML = `<div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2"><span><b>有一批巡堂資料尚未確認成功</b>（${escapeHtml(c.date)} 第 ${escapeHtml(c.period)} 節），重試時會沿用固定內容與識別碼。</span><div class="flex gap-2"><button type="button" onclick="retryPendingBatch()" class="px-3 py-1.5 rounded-lg bg-amber-600 text-white font-black text-sm">重試此批次</button><button type="button" onclick="confirmDiscardPendingBatch()" class="px-3 py-1.5 rounded-lg border border-amber-500 text-amber-900 font-black text-sm">取消待重試</button></div></div>`;
+}
+function confirmDiscardPendingBatch() {
+    if (batchSubmitInFlight) { showToast("送出處理中，暫時無法取消。", false); return; }
+    showCustomModal("取消待重試批次", "若伺服器其實已儲存，取消後再次填寫可能產生重複紀錄。確定清除這批固定資料嗎？", () => { discardPendingBatchSubmission(); renderPendingBatchBanner(); });
+}
+function retryPendingBatch() {
+    const pending = getPendingBatch();
+    if (!pending?.context) return;
+    if (batchSubmitInFlight) { showToast("巡堂資料正在送出，請稍候。", false); return; }
+    batchSubmitInFlight = true;
+    const btnDesk = document.getElementById("btn-submit-batch"); const btnMob = document.getElementById("btn-submit-batch-mobile");
+    if (btnDesk) btnDesk.disabled = true; if (btnMob) btnMob.disabled = true;
+    google.script.run.withSuccessHandler(res => {
+        batchSubmitInFlight = false; if (btnDesk) btnDesk.disabled = false; if (btnMob) btnMob.disabled = false;
+        if (res && res.success && res.duplicate) { clearPendingBatch(); renderPendingBatchBanner(); clearBatchDraft(pending.context, pending.draftSnapshot || 0); showToast("此批次資料原已存在，未再次新增。", false); loadHistoryDataFromServer(); loadEmailDeliverySummary(); }
+        else if (res && res.success) { clearPendingBatch(); renderPendingBatchBanner(); clearBatchDraft(pending.context, pending.draftSnapshot || 0); showToast(`巡堂資料已儲存。${res.email?.message || ""}`, !["failed", "partial", "skipped"].includes(res.email?.status)); loadHistoryDataFromServer(); loadEmailDeliverySummary(); }
+        else if (res && res.success === false) { clearPendingBatch(); renderPendingBatchBanner(); showToast("伺服器拒絕此批次：" + res.message, false); }
+        else { showToast("伺服器回應不明，固定批次仍保留。", false); }
+    }).withFailureHandler(err => {
+        batchSubmitInFlight = false; if (btnDesk) btnDesk.disabled = false; if (btnMob) btnMob.disabled = false; showToast("重試連線失敗，固定批次仍保留。", false);
+    }).saveBatchInspectionRecords(pending.entries || [], pending.context.semester);
+}
+function getPendingBatch() { return safeSessionGet(PENDING_BATCH_STORAGE_KEY, null); }
+function persistPendingBatch(payload) { safeSessionSet(PENDING_BATCH_STORAGE_KEY, payload); }
+function clearPendingBatch() { safeSessionRemove(PENDING_BATCH_STORAGE_KEY); }
+function discardPendingBatchSubmission() { clearPendingBatch(); showToast("已清除待重試巡堂批次"); }
+window.addEventListener("beforeunload", event => {
+    if (batchDraftTouched || getPendingBatch()) { event.preventDefault(); event.returnValue = "尚有未送出的巡堂資料，確定離開？"; }
+});
+document.addEventListener("input", event => { if (event.target.closest?.("#batch-cards-container")) { batchDraftTouched = true; captureBatchDraft(); } });
+document.addEventListener("change", event => { if (event.target.closest?.("#batch-cards-container")) { batchDraftTouched = true; captureBatchDraft(); } });
+
+function syncMobileInputState() {
+    const active = document.activeElement;
+    const editing = !!active && active.matches('textarea, select, input:not([type="radio"]):not([type="checkbox"]):not([type="button"]):not([type="submit"]), [contenteditable="true"]');
+    document.body.classList.toggle("mobile-input-active", editing);
+}
+function keepMobileInputVisible() {
+    syncMobileInputState();
+    if (!document.body.classList.contains("mobile-input-active") || window.innerWidth >= 640) return;
+    const active = document.activeElement;
+    const viewport = window.visualViewport;
+    const bounds = active.getBoundingClientRect();
+    const top = viewport ? viewport.offsetTop : 0;
+    const bottom = top + (viewport ? viewport.height : window.innerHeight);
+    if (bounds.bottom > bottom - 20 || bounds.top < top) {
+        active.scrollIntoView({ block: "center", behavior: "auto" });
+    }
+}
+document.addEventListener("focusin", () => {
+    syncMobileInputState();
+    window.setTimeout(keepMobileInputVisible, 300);
+});
+document.addEventListener("focusout", () => window.setTimeout(syncMobileInputState, 0));
+if (window.visualViewport) window.visualViewport.addEventListener("resize", keepMobileInputVisible);
+
+const PERIOD_TIMES = {
+    1: "08:00-08:50",
+    2: "09:10-10:00",
+    3: "10:10-11:00",
+    4: "11:10-12:00",
+    5: "13:10-14:00",
+    6: "14:10-15:00",
+    7: "15:10-16:00",
+    8: "16:10-17:00",
+};
+
+function escapeHtml(value) {
+    return String(value == null ? "" : value)
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#39;");
+}
+
+function encodeInlineValue(value) {
+    return encodeURIComponent(String(value == null ? "" : value)).replace(/'/g, "%27");
+}
+
+function toCsvCell(value) {
+    let text = String(value == null ? "" : value);
+    if (/^[=+\-@]/.test(text)) text = "'" + text;
+    return `"${text.replace(/"/g, '""')}"`;
+}
+
+function renderEmailNotificationStatus(status) {
+    const value = status || {};
+    const teachingEl = document.getElementById("email-teaching-count");
+    const repairEl = document.getElementById("email-repair-count");
+    const quotaEl = document.getElementById("email-quota-count");
+    const messageEl = document.getElementById("email-status-message");
+    const teachingCount = Number(value.teachingCount || 0);
+    const repairCount = Number(value.repairCount || 0);
+    const invalidCount = Number(value.invalidCount || 0);
+
+    if (teachingEl) teachingEl.innerText = `${teachingCount} 位`;
+    if (repairEl) repairEl.innerText = `${repairCount} 位`;
+    if (quotaEl) quotaEl.innerText = value.remainingDailyQuota == null ? "尚未檢查" : `${value.remainingDailyQuota} 封`;
+    if (!messageEl) return;
+
+    if (value.success === false) {
+        messageEl.className = "text-sm font-bold rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-rose-800";
+        messageEl.innerText = value.message || "Email 通報狀態讀取失敗。";
+    } else if (invalidCount > 0) {
+        messageEl.className = "text-sm font-bold rounded-xl border border-amber-300 bg-amber-50 px-4 py-3 text-amber-900";
+        messageEl.innerText = `發現 ${invalidCount} 個格式不正確的 Email，已自動略過；請到「系統選單設定」修正。`;
+    } else if (teachingCount === 0 || repairCount === 0) {
+        messageEl.className = "text-sm font-bold rounded-xl border border-amber-300 bg-amber-50 px-4 py-3 text-amber-900";
+        messageEl.innerText = "尚未完成兩類收件人設定；沒有有效收件人的通報類型將不會寄信。";
+    } else {
+        messageEl.className = "text-sm font-bold rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-emerald-800";
+        messageEl.innerText = "Email 通報已就緒：只有教學異常或設備報修紀錄會觸發寄送。";
+    }
+}
+
+function refreshEmailNotificationStatus(showFeedback = false) {
+    google.script.run
+        .withSuccessHandler(function(status) {
+            renderEmailNotificationStatus(status);
+            if (showFeedback) {
+                showToast(status && status.success !== false ? "Email 通報設定檢查完成" : "Email 通報設定尚未完成", status && status.success !== false);
+            }
+        })
+        .withFailureHandler(function() {
+            renderEmailNotificationStatus({ success: false, message: "Email 通報狀態讀取失敗，請稍後再試。" });
+            if (showFeedback) showToast("Email 通報狀態讀取失敗", false);
+        })
+        .getEmailNotificationStatus();
+}
+
+function renderEmailDeliverySummary(summary) {
+    const el = document.getElementById("email-delivery-summary");
+    const retryBtn = document.getElementById("btn-retry-email");
+    if (!el) return;
+    const value = summary || {};
+    if (value.success === false) {
+        el.className = "text-sm rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-rose-800";
+        el.textContent = value.message || "Email 寄送摘要讀取失敗。";
+        if (retryBtn) retryBtn.classList.add("hidden");
+        return;
+    }
+    const failed = Number(value.failed ?? value.failedCount ?? 0);
+    const retryable = Number(value.retryableFailed ?? value.retryableFailedCount ?? value.pending ?? 0);
+    const sent = Number(value.sent ?? value.sentCount ?? 0);
+    const skipped = Number(value.skipped ?? value.skippedCount ?? 0);
+    const exhausted = Number(value.exhausted ?? value.exhaustedCount ?? 0);
+    const sending = Number(value.sending ?? value.inFlight ?? 0);
+    el.className = retryable > 0 || failed > 0 ? "text-sm rounded-xl border border-amber-300 bg-amber-50 px-4 py-3 text-amber-900" : "text-sm rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-emerald-800";
+    el.textContent = `已寄送 ${sent} 筆；失敗 ${failed} 筆（可重試 ${retryable} 筆${exhausted ? `、已達上限 ${exhausted} 筆` : ""}）${sending ? `；處理中／結果待確認 ${sending} 筆，不會自動重寄` : ""}。此摘要從本次功能更新後開始累計。`;
+    if (retryBtn) retryBtn.classList.toggle("hidden", retryable <= 0);
+}
+function loadEmailDeliverySummary(showFeedback = false) {
+    if (typeof google === "undefined" || !google.script || !google.script.run) return;
+    google.script.run.withSuccessHandler(summary => {
+        renderEmailDeliverySummary(summary);
+        if (showFeedback) showToast(summary && summary.success !== false ? "Email 寄送摘要已更新" : "Email 摘要讀取失敗", summary && summary.success !== false);
+    }).withFailureHandler(() => {
+        renderEmailDeliverySummary({ success: false, message: "Email 寄送摘要讀取失敗，請稍後再試。" });
+        if (showFeedback) showToast("Email 摘要讀取失敗", false);
+    }).getEmailDeliverySummary();
+}
+function retryFailedEmails() {
+    const btn = document.getElementById("btn-retry-email"); if (btn) btn.disabled = true;
+    const runner = google.script.run.withSuccessHandler(res => {
+        if (btn) btn.disabled = false;
+        const ok = !!res && res.success !== false && !res.failedCount;
+        showToast(res ? `補寄完成：寄出 ${res.sentCount || 0} 筆、失敗 ${res.failedCount || 0} 筆、略過 ${res.skippedCount || 0} 筆。` : "補寄結果未確認，請重新整理摘要。", ok);
+        loadEmailDeliverySummary(false);
+    }).withFailureHandler(() => {
+        if (btn) btn.disabled = false;
+        showToast("失敗通報重試失敗，請稍後再試", false);
+    });
+    runner.retryFailedEmailNotifications();
+}
+
+function formatRocDate(dateStr) {
+    if (!dateStr) return "--";
+    const parts = dateStr.split('-').map(Number);
+    if (parts.length < 3) return dateStr;
+    const rocY = parts[0] > 1911 ? parts[0] - 1911 : parts[0];
+    return `${rocY} 年 ${parts[1]} 月 ${parts[2]} 日`;
+}
+
+function formatShortRocDate(dateStr) {
+    if (!dateStr) return "--";
+    const parts = dateStr.split('-');
+    if (parts.length < 3) return dateStr;
+    const y = parseInt(parts[0], 10);
+    const rocY = y > 1911 ? y - 1911 : y;
+    return `${rocY}/${parts[1]}/${parts[2]}`;
+}
+
+function showToast(message, isSuccess = true) {
+    const toast = document.getElementById("toast-message");
+    const toastText = document.getElementById("toast-text");
+    const toastIcon = document.getElementById("toast-icon");
+    if (!toast || !toastText) return;
+
+    toastText.innerText = message;
+    if (toastIcon) {
+        toastIcon.innerText = isSuccess ? "✓" : "⚠";
+        toastIcon.className = isSuccess ? "text-emerald-400 font-black text-xl" : "text-amber-400 font-black text-xl";
+    }
+    toast.classList.remove("opacity-0", "translate-y-20", "pointer-events-none");
+    toast.classList.add("opacity-100", "translate-y-0");
+
+    setTimeout(() => {
+        toast.classList.remove("opacity-100", "translate-y-0");
+        toast.classList.add("opacity-0", "translate-y-20", "pointer-events-none");
+    }, 2800);
+}
+
+let modalConfirmCallback = null;
+let modalPreviousFocus = null;
+let teacherModalPreviousFocus = null;
+function showCustomModal(title, message, onConfirm) {
+    const container = document.getElementById("modal-container");
+    const titleEl = document.getElementById("modal-title");
+    const msgEl = document.getElementById("modal-message");
+    if (!container) return;
+    if (titleEl) titleEl.innerText = title;
+    if (msgEl) msgEl.innerText = message;
+    modalPreviousFocus = document.activeElement;
+    modalConfirmCallback = onConfirm;
+    container.classList.remove("hidden");
+    container.classList.add("flex");
+    window.setTimeout(() => document.getElementById("modal-confirm-btn")?.focus(), 0);
+}
+
+function closeModal(confirmed) {
+    const container = document.getElementById("modal-container");
+    if (container) {
+        container.classList.add("hidden");
+        container.classList.remove("flex");
+    }
+    if (confirmed && typeof modalConfirmCallback === "function") {
+        modalConfirmCallback();
+    }
+    modalConfirmCallback = null;
+    if (modalPreviousFocus && typeof modalPreviousFocus.focus === "function") modalPreviousFocus.focus();
+    modalPreviousFocus = null;
+}
+
+document.addEventListener("keydown", (event) => {
+    if (event.key !== "Escape") return;
+    const teacherModal = document.getElementById("teacher-timetable-modal");
+    const confirmModal = document.getElementById("modal-container");
+    if (teacherModal && !teacherModal.classList.contains("hidden")) closeTeacherModal();
+    else if (confirmModal && !confirmModal.classList.contains("hidden")) closeModal(false);
+});
+
+document.addEventListener("DOMContentLoaded", () => {
+    if (typeof lucide !== 'undefined') lucide.createIcons();
+    initSystem();
+    initDashboardCharts();
+});
+
+function initSystem() {
+    // 1. 同時載入系統選單設定與學期資料
+    google.script.run
+        .withSuccessHandler(function(options) {
+            if (options) {
+                SYSTEM_OPTIONS = Object.assign(SYSTEM_OPTIONS, options);
+            }
+            applySchoolName(SYSTEM_OPTIONS.schoolName);
+            populateGlobalOptionsUI();
+            renderEmailNotificationStatus(options && options.emailStatus);
+            refreshEmailNotificationStatus(false);
+            loadEmailDeliverySummary(false);
+            initSemesterAndSchedule();
+        })
+        .withFailureHandler(function(err) {
+            console.error("載入選單設定異常，使用預設值:", err);
+            applySchoolName(SYSTEM_OPTIONS.schoolName);
+            populateGlobalOptionsUI();
+            initSemesterAndSchedule();
+        })
+        .getSystemOptions();
+}
+
+function populateGlobalOptionsUI() {
+    // 巡查身分職稱選單
+    const roleSelect = document.getElementById("batch-inspector-role");
+    if (roleSelect) {
+        const roles = SYSTEM_OPTIONS.inspectorRoles || ["校長", "教導主任", "總務主任", "教學組長", "訓導組長", "導護"];
+        roleSelect.innerHTML = roles.map(r => `<option value="${escapeHtml(r)}" ${r === '教學組長' ? 'selected' : ''}>${escapeHtml(r)}</option>`).join("");
+    }
+
+    // 歷史紀錄職稱篩選
+    const filterRole = document.getElementById("filter-role");
+    if (filterRole) {
+        const roles = SYSTEM_OPTIONS.inspectorRoles || ["校長", "教導主任", "總務主任", "教學組長", "訓導組長", "導護"];
+        filterRole.innerHTML = `<option value="ALL">全部身分</option>` + roles.map(r => `<option value="${escapeHtml(r)}">${escapeHtml(r)}</option>`).join("");
+    }
+}
+
+function initSemesterAndSchedule() {
+    google.script.run
+        .withSuccessHandler(function(res) {
+            CURRENT_SEMESTER = res.activeSemester || "115-1";
+            updateSemesterUI(res.list, CURRENT_SEMESTER);
+            loadScheduleForSemester(CURRENT_SEMESTER);
+        })
+        .withFailureHandler(function(err) {
+            showToast("學期設定載入失敗: " + err, false);
+        })
+        .getSemesterListAndActive();
+}
+
+function updateSemesterUI(list, activeCode) {
+    const badge = document.getElementById("current-semester-badge");
+    if (badge) badge.innerText = activeCode;
+    const printSem = document.getElementById("print-header-sem");
+    if (printSem) printSem.innerText = activeCode;
+
+    const select = document.getElementById("select-active-semester");
+    if (select) {
+        select.innerHTML = list.map(item => `
+            <option value="${escapeHtml(item.code)}" ${item.code === activeCode ? 'selected' : ''}>
+                ${escapeHtml(item.name)} (${escapeHtml(item.code)}) ${item.active ? '★ 啟用中' : ''}
+            </option>
+        `).join("");
+    }
+}
+
+function loadScheduleForSemester(semCode) {
+    google.script.run
+        .withSuccessHandler(function(res) {
+            MASTER_SCHEDULE = res.schedule || {};
+            TEACHERS_LIST = res.teachers || ["代課老師"];
+            
+            setInitialBatchDate();
+            autoDetectCurrentPeriod(false);
+            renderBatchCards();
+            initTeacherSelectorOptions();
+            renderTeachersQuickReferenceList();
+            renderTimetableGrid();
+            loadHistoryDataFromServer();
+        })
+        .withFailureHandler(function(err) {
+            showToast("課表載入失敗: " + err, false);
+        })
+        .getMasterScheduleBySemester(semCode);
+}
+
+function loadAllSystemData(showPrompt = false) {
+    const icon = document.getElementById("refresh-icon");
+    if (icon) icon.classList.add("animate-spin");
+
+    google.script.run
+        .withSuccessHandler(function(options) {
+            if (options) SYSTEM_OPTIONS = Object.assign(SYSTEM_OPTIONS, options);
+            applySchoolName(SYSTEM_OPTIONS.schoolName);
+            populateGlobalOptionsUI();
+            renderEmailNotificationStatus(options && options.emailStatus);
+            refreshEmailNotificationStatus(false);
+            
+            google.script.run
+                .withSuccessHandler(function(records) {
+                    if (icon) icon.classList.remove("animate-spin");
+                    inspectionRecords = records || [];
+                    onDataUpdated();
+                    renderBatchCards();
+                    if (showPrompt) showToast("已同步最新試算表與選單設定！");
+                })
+                .withFailureHandler(function(err) {
+                    if (icon) icon.classList.remove("animate-spin");
+                    showToast("同步失敗: " + err, false);
+                })
+                .getAllInspectionRecords(CURRENT_SEMESTER);
+        })
+        .withFailureHandler(function(err) {
+            if (icon) icon.classList.remove("animate-spin");
+            showToast("選單設定同步失敗: " + err, false);
+        })
+        .getSystemOptions();
+}
+
+function loadHistoryDataFromServer() {
+    google.script.run
+        .withSuccessHandler(function(records) {
+            inspectionRecords = records || [];
+            onDataUpdated();
+        })
+        .withFailureHandler(function(err) {
+            showToast("巡查紀錄讀取失敗: " + err, false);
+        })
+        .getAllInspectionRecords(CURRENT_SEMESTER);
+}
+
+function onDataUpdated() {
+    initPrintSessionSelection();
+    renderHistoryTable();
+    updateDashboard();
+    renderPrintScopeCheckboxes();
+    renderPrintTable();
+}
+
+function switchTab(tabId) {
+    document.querySelectorAll(".tab-content").forEach(el => el.classList.add("hidden"));
+    document.querySelectorAll(".tab-btn").forEach(btn => {
+        btn.classList.remove("border-blue-600", "text-blue-600", "border-b-2", "font-black");
+        btn.classList.add("border-transparent", "text-slate-600");
+    });
+
+    const targetContent = document.getElementById(`tab-content-${tabId}`);
+    const targetBtn = document.getElementById(`tab-btn-${tabId}`);
+    if (targetContent) targetContent.classList.remove("hidden");
+    if (targetBtn) {
+        targetBtn.classList.remove("border-transparent", "text-slate-600");
+        targetBtn.classList.add("border-blue-600", "text-blue-600", "border-b-2", "font-black");
+        targetBtn.scrollIntoView({ behavior: "smooth", block: "nearest", inline: "center" });
+    }
+
+    const mobileActionBar = document.getElementById("mobile-action-bar");
+    if (mobileActionBar) mobileActionBar.classList.toggle("hidden", tabId !== "new-record");
+
+    if (tabId === "dashboard") updateDashboard();
+    else if (tabId === "history") renderHistoryTable();
+    else if (tabId === "timetable") {
+        renderTimetableGrid();
+        renderTeachersQuickReferenceList();
+    } else if (tabId === "print-report") {
+        initPrintSessionSelection();
+        renderPrintScopeCheckboxes();
+        renderPrintTable();
+    } else if (tabId === "settings") {
+        refreshEmailNotificationStatus(false);
+        loadEmailDeliverySummary(false);
+    }
+    if (typeof lucide !== 'undefined') lucide.createIcons();
+}
+
+function setInitialBatchDate() {
+    const now = new Date();
+    const year = now.getFullYear();
+    const month = String(now.getMonth() + 1).padStart(2, '0');
+    const day = String(now.getDate()).padStart(2, '0');
+    const today = `${year}-${month}-${day}`;
+
+    const dateInput = document.getElementById("batch-date");
+    if (dateInput && !dateInput.value) {
+        dateInput.value = today;
+        updateBatchWeekdayFromDate();
+    }
+}
+
+function updateBatchWeekdayFromDate() {
+    const dateVal = document.getElementById("batch-date")?.value;
+    if (!dateVal) return;
+    const [y, m, d] = dateVal.split('-').map(Number);
+    const dayNum = new Date(y, m - 1, d).getDay();
+    const weekdaySelect = document.getElementById("batch-weekday");
+    if (!weekdaySelect) return;
+
+    if (dayNum === 0 || dayNum === 6) {
+        showToast("⚠️ 所選日期為週末，自動切換至週一課表", false);
+        weekdaySelect.value = "Mon";
+    } else {
+        const mapping = { 1: "Mon", 2: "Tue", 3: "Wed", 4: "Thu", 5: "Fri" };
+        weekdaySelect.value = mapping[dayNum] || "Mon";
+    }
+}
+
+function handleBatchDateChange() {
+    updateBatchWeekdayFromDate();
+    renderBatchCards();
+}
+
+function autoDetectCurrentPeriod(showFeedback = true) {
+    const now = new Date();
+    const minutes = now.getHours() * 60 + now.getMinutes();
+
+    let detected = "3";
+    if (minutes < 565) detected = "1";
+    else if (minutes < 620) detected = "2";
+    else if (minutes < 675) detected = "3";
+    else if (minutes < 740) detected = "4";
+    else if (minutes < 855) detected = "5";
+    else if (minutes < 910) detected = "6";
+    else detected = "7";
+
+    const select = document.getElementById("batch-period");
+    if (select) {
+        select.value = detected;
+        if (showFeedback) {
+            showToast(`⏰ 已帶入當前節次：第 ${detected} 節`);
+            renderBatchCards();
+        }
+    }
+}
+
+// ---------------------- 渲染大字體巡查卡片 ----------------------
+
+function renderBatchCards() {
+    const container = document.getElementById("batch-cards-container");
+    if (!container) return;
+
+    captureBatchDraft();
+
+    const dateVal = document.getElementById("batch-date")?.value || "";
+    const weekday = document.getElementById("batch-weekday")?.value || "Wed";
+    const period = document.getElementById("batch-period")?.value || "3";
+    const periodNum = parseInt(period, 10);
+    renderedBatchContext = { semester: CURRENT_SEMESTER, date: dateVal, weekday, period };
+    const isWedAfternoon = (weekday === "Wed" && periodNum >= 5);
+
+    const indicator = document.getElementById("batch-status-indicator");
+    if (indicator) {
+        indicator.innerText = `${dateVal} 第 ${period} 節課表 ${isWedAfternoon ? '(週三下午無課)' : ''}`;
+        indicator.className = isWedAfternoon 
+            ? "text-sm font-black px-3 py-1 rounded-lg bg-amber-100 text-amber-900 border border-amber-300" 
+            : "text-sm font-black px-3 py-1 rounded-lg bg-blue-100 text-blue-900";
+    }
+
+    let wedNoticeBanner = "";
+    if (isWedAfternoon) {
+        wedNoticeBanner = `
+            <div class="col-span-full bg-amber-50 border-2 border-dashed border-amber-300 rounded-2xl p-5 text-center space-y-1.5 shadow-xs">
+                <div class="flex items-center justify-center space-x-2 text-amber-950 font-black text-base sm:text-lg">
+                    <i data-lucide="calendar-off" class="w-5 h-5 text-amber-600"></i>
+                    <span>星期三下午為全校教師進修時間，全校各班半天放學</span>
+                </div>
+                <p class="text-sm text-amber-800">依課表規範各班免巡查，無需送出巡查紀錄。</p>
+            </div>
+        `;
+    }
+
+    const locations = SYSTEM_OPTIONS.locations || ["原班教室", "多功能教室", "E化教室", "圓形教室", "語言教室", "多元教室", "海涵樓", "育樂中心", "行政大樓", "操場", "籃球場", "其他"];
+    const evalEnvs = SYSTEM_OPTIONS.evalEnvs || ["良好", "尚可", "待改善"];
+    const evalIts = SYSTEM_OPTIONS.evalIts || ["觸控大屏/電子白板", "學生平板載具", "簡報/投影機", "板書/傳統教具", "無"];
+    const evalExams = SYSTEM_OPTIONS.evalExams || ["正常教學無測驗", "隨堂形成性小考", "違規佔用藝能課考試", "跨科違規考試"];
+    const evalDisciplines = SYSTEM_OPTIONS.evalDisciplines || ["良好", "尚可", "待加強"];
+
+    const cardsHtml = CLASSES_LIST.map(cls => {
+        const scheduleInfo = MASTER_SCHEDULE[cls]?.[weekday]?.[period];
+        const hasClass = !!scheduleInfo;
+        const sub = hasClass ? scheduleInfo.sub : "無課務";
+        const t = hasClass ? scheduleInfo.t : "（半天放學）";
+        const safeCls = escapeHtml(cls);
+        const safeSub = escapeHtml(sub);
+        const safeTeacher = escapeHtml(t);
+        const encodedCls = encodeInlineValue(cls);
+        const encodedTeacher = encodeInlineValue(t);
+
+        const teacherOptions = TEACHERS_LIST.map(item => {
+            const isSelected = item === t;
+            return `<option value="${escapeHtml(item)}" ${isSelected ? "selected" : ""}>${escapeHtml(item)}</option>`;
+        }).join("");
+
+        const locationOptions = locations.map(loc => {
+            return `<option value="${escapeHtml(loc)}" ${loc === "原班教室" ? "selected" : ""}>${escapeHtml(loc)}</option>`;
+        }).join("");
+
+        const envOptions = evalEnvs.map(env => {
+            return `<option value="${escapeHtml(env)}" ${env === "良好" ? "selected" : ""}>${escapeHtml(env)}</option>`;
+        }).join("");
+
+        const itOptions = evalIts.map(it => {
+            return `<option value="${escapeHtml(it)}" ${it.includes("大屏") || it.includes("白板") ? "selected" : ""}>${escapeHtml(it)}</option>`;
+        }).join("");
+
+        const examOptions = evalExams.map(ex => {
+            return `<option value="${escapeHtml(ex)}" ${ex.includes("正常") ? "selected" : ""}>${escapeHtml(ex)}</option>`;
+        }).join("");
+
+        const disciplineOptions = evalDisciplines.map(dp => {
+            return `<option value="${escapeHtml(dp)}" ${dp === "良好" ? "selected" : ""}>${escapeHtml(dp)}</option>`;
+        }).join("");
+
+        if (!hasClass) {
+            return `
+                <div class="bg-slate-100/80 border-2 border-dashed border-slate-300 rounded-2xl p-4 opacity-75">
+                    <div class="flex items-center justify-between">
+                        <span class="bg-slate-500 text-white font-black text-base px-3 py-1 rounded-lg">${safeCls}</span>
+                        <span class="text-sm text-slate-600 font-bold">半天放學無課務</span>
+                    </div>
+                </div>
+            `;
+        }
+
+        return `
+            <div id="batch-card-${safeCls}" class="bg-white border-2 border-slate-200 rounded-2xl p-4 sm:p-5 shadow-xs space-y-4 transition" data-class="${safeCls}">
+                <!-- 班級與預定資訊 -->
+                <div class="batch-card-header pb-2.5 border-b border-slate-100">
+                    <div class="batch-card-identity">
+                        <span class="batch-class-badge bg-blue-800 text-white font-black text-base sm:text-lg px-3 py-1 rounded-xl shadow-xs">${safeCls}</span>
+                        <div class="batch-card-heading-copy leading-snug">
+                            <span class="block text-base font-black text-slate-900 break-words">預定：${safeSub}</span>
+                            <button type="button" class="block text-left text-sm text-slate-600 font-bold hover:text-blue-700 hover:underline break-words" onclick="openTeacherModal(decodeURIComponent('${encodedTeacher}'))" title="點擊查看該師課表">${safeTeacher}</button>
+                        </div>
+                    </div>
+                    <button type="button" id="details-toggle-${safeCls}" aria-controls="details-section-${safeCls}" aria-expanded="true" onclick="toggleCardDetails(decodeURIComponent('${encodedCls}'))" class="batch-card-details-button shrink-0 text-sm text-blue-700 font-black px-3 py-1.5 bg-blue-50 rounded-xl hover:bg-blue-100 flex items-center space-x-1">
+                        <span data-details-label>收合細部檢核</span>
+                        <i data-lucide="chevron-down" class="w-4 h-4" style="transform:rotate(180deg)"></i>
+                    </button>
+                </div>
+
+                <!-- 課務吻合狀態大按鈕 -->
+                <div>
+                    <label class="block text-sm font-black text-slate-700 mb-1.5">課務狀態：</label>
+                    <div class="status-grid grid grid-cols-2 sm:grid-cols-4 gap-1.5 sm:gap-2 text-center" role="radiogroup" aria-label="課務狀態">
+                        <label class="cursor-pointer">
+                            <input type="radio" name="status-${safeCls}" value="吻合" checked aria-label="${safeCls} 課務吻合" onchange="handleClassStatusChange(decodeURIComponent('${encodedCls}')); captureBatchDraft()" class="peer sr-only">
+                            <div class="py-2.5 text-sm sm:text-base font-black rounded-xl border border-slate-200 bg-slate-50 text-slate-700 peer-checked:bg-emerald-600 peer-checked:text-white peer-checked:border-emerald-600 transition shadow-xs">吻合</div>
+                        </label>
+                        <label class="cursor-pointer">
+                            <input type="radio" name="status-${safeCls}" value="調課" aria-label="${safeCls} 核備調課" onchange="handleClassStatusChange(decodeURIComponent('${encodedCls}')); captureBatchDraft()" class="peer sr-only">
+                            <div class="py-2.5 text-sm sm:text-base font-black rounded-xl border border-slate-200 bg-slate-50 text-slate-700 peer-checked:bg-amber-600 peer-checked:text-white peer-checked:border-amber-600 transition shadow-xs">調課</div>
+                        </label>
+                        <label class="cursor-pointer">
+                            <input type="radio" name="status-${safeCls}" value="公假代理" aria-label="${safeCls} 公假代理" onchange="handleClassStatusChange(decodeURIComponent('${encodedCls}')); captureBatchDraft()" class="peer sr-only">
+                            <div class="py-2.5 text-sm sm:text-base font-black rounded-xl border border-slate-200 bg-slate-50 text-slate-700 peer-checked:bg-blue-600 peer-checked:text-white peer-checked:border-blue-600 transition shadow-xs">代理</div>
+                        </label>
+                        <label class="cursor-pointer">
+                            <input type="radio" name="status-${safeCls}" value="異常不符" aria-label="${safeCls} 異常不符" onchange="handleClassStatusChange(decodeURIComponent('${encodedCls}')); captureBatchDraft()" class="peer sr-only">
+                            <div class="py-2.5 text-sm sm:text-base font-black rounded-xl border border-slate-200 bg-slate-50 text-slate-700 peer-checked:bg-rose-600 peer-checked:text-white peer-checked:border-rose-600 transition shadow-xs">不符</div>
+                        </label>
+                    </div>
+                </div>
+
+                <!-- 現場快速微調 -->
+                <div class="batch-quick-fields gap-2.5">
+                    <div class="batch-location-field">
+                        <span class="text-xs sm:text-sm text-slate-600 font-bold block mb-1">實授科目</span>
+                        <input type="text" id="actual-sub-${safeCls}" value="${safeSub}" class="w-full bg-slate-50 border border-slate-200 rounded-xl p-2.5 text-base font-black text-slate-900">
+                    </div>
+                    <div>
+                        <span class="text-xs sm:text-sm text-slate-600 font-bold block mb-1">實授教師</span>
+                        <select id="actual-teacher-${safeCls}" onchange="handleTeacherSelectChange(decodeURIComponent('${encodedCls}')); updateReadableSelect(this); captureBatchDraft()" class="w-full bg-slate-50 border border-slate-200 rounded-xl p-2.5 text-base font-black text-slate-900" aria-label="${safeCls} 實授教師">
+                            ${teacherOptions}
+                        </select>
+                        <span class="select-readable-text" data-readable-for="actual-teacher-${safeCls}"></span>
+                    </div>
+                    <div>
+                        <span class="text-xs sm:text-sm text-blue-900 font-bold block mb-1">📍 上課地點</span>
+                        <select id="actual-location-${safeCls}" onchange="updateReadableSelect(this); captureBatchDraft()" class="w-full bg-blue-50/60 border border-blue-200 rounded-xl p-2.5 text-base font-black text-blue-950 focus:bg-white" aria-label="${safeCls} 上課地點">
+                            ${locationOptions}
+                        </select>
+                        <span class="select-readable-text" data-readable-for="actual-location-${safeCls}"></span>
+                    </div>
+                </div>
+
+                <!-- 折疊細部檢核 (4大教學正常化指標全數齊全) -->
+                <div id="details-section-${cls}" role="region" aria-label="${safeCls} 細部檢核" style="scroll-margin-top: 10rem" class="pt-3 border-t border-slate-100 space-y-3">
+                    <div class="batch-detail-fields gap-2.5">
+                        <div>
+                            <span class="text-xs sm:text-sm text-slate-600 font-bold block mb-1">環境衛生</span>
+                            <select id="eval-env-${cls}" class="w-full bg-slate-50 border border-slate-200 rounded-xl p-2.5 text-base font-bold">
+                                ${envOptions}
+                            </select>
+                        </div>
+                        <div>
+                            <span class="text-xs sm:text-sm text-slate-600 font-bold block mb-1">資訊科技運用</span>
+                            <select id="eval-it-${cls}" class="w-full bg-slate-50 border border-slate-200 rounded-xl p-2.5 text-base font-bold">
+                                ${itOptions}
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="batch-detail-fields gap-2.5">
+                        <div>
+                            <span class="text-xs sm:text-sm text-slate-600 font-bold block mb-1">學習評量正常化</span>
+                            <select id="eval-exam-${cls}" class="w-full bg-slate-50 border border-slate-200 rounded-xl p-2.5 text-base font-bold">
+                                ${examOptions}
+                            </select>
+                        </div>
+                        <div>
+                            <span class="text-xs sm:text-sm text-slate-600 font-bold block mb-1">課堂秩序紀律</span>
+                            <select id="eval-discipline-${cls}" class="w-full bg-slate-50 border border-slate-200 rounded-xl p-2.5 text-base font-bold">
+                                ${disciplineOptions}
+                            </select>
+                        </div>
+                    </div>
+
+                    <div id="subnotes-wrap-${cls}" class="hidden">
+                        <input type="text" id="subnotes-${cls}" placeholder="輸入調課/代課事由或核備說明..." class="w-full bg-amber-50 border border-amber-200 rounded-xl p-2.5 text-base font-bold text-amber-950">
+                    </div>
+
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                        <div>
+                            <span class="text-xs sm:text-sm text-slate-600 font-bold block mb-1">巡堂觀察</span>
+                            <input type="text" id="praise-${cls}" placeholder="如：專課專授、師生互動熱烈" class="w-full bg-slate-50 border border-slate-200 rounded-xl p-2.5 text-base font-medium">
+                        </div>
+                        <div>
+                            <span class="text-xs sm:text-sm text-amber-900 font-black block mb-1">🔧 設備需修繕 (若無則留空)</span>
+                            <input type="text" id="repair-${cls}" placeholder="如：大屏黑屏、冷氣異音、插座損壞" class="w-full bg-amber-50/60 border border-amber-200 rounded-xl p-2.5 text-base font-medium">
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `;
+    }).join("");
+
+    container.innerHTML = wedNoticeBanner + cardsHtml;
+    restoreBatchDraft();
+    container.querySelectorAll("select").forEach(updateReadableSelect);
+    renderPendingBatchBanner();
+    if (typeof lucide !== 'undefined') lucide.createIcons();
+}
+
+function updateReadableSelect(select) {
+    if (!select) return;
+    const helper = document.querySelector(`[data-readable-for="${select.id}"]`);
+    if (helper) helper.textContent = select.options[select.selectedIndex]?.textContent || select.value || "";
+}
+
+function toggleCardDetails(cls) {
+    const el = document.getElementById(`details-section-${cls}`);
+    if (!el) return;
+    const open = el.classList.contains("hidden");
+    setCardDetailsOpen(cls, open);
+    captureBatchDraft();
+    if (open) el.scrollIntoView({ behavior: "smooth", block: "start" });
+}
+
+function setCardDetailsOpen(cls, open) {
+    const el = document.getElementById(`details-section-${cls}`);
+    const button = document.getElementById(`details-toggle-${cls}`);
+    if (el) el.classList.toggle("hidden", !open);
+    if (!button) return;
+    button.setAttribute("aria-expanded", String(open));
+    const label = button.querySelector("[data-details-label]");
+    if (label) label.textContent = open ? "收合細部檢核" : "展開細部檢核";
+    const icon = button.querySelector("svg, i");
+    if (icon) icon.style.transform = open ? "rotate(180deg)" : "";
+}
+
+function handleTeacherSelectChange(cls) {
+    const val = document.getElementById(`actual-teacher-${cls}`)?.value;
+    if (val === "代課老師") {
+        const proxyRadio = document.querySelector(`input[name="status-${cls}"][value="公假代理"]`);
+        if (proxyRadio) {
+            proxyRadio.checked = true;
+            handleClassStatusChange(cls);
+        }
+    }
+}
+
+function handleClassStatusChange(cls) {
+    const status = document.querySelector(`input[name="status-${cls}"]:checked`)?.value;
+    const wrap = document.getElementById(`subnotes-wrap-${cls}`);
+    const card = document.getElementById(`batch-card-${cls}`);
+    if (status && status !== "吻合") {
+        if (wrap) wrap.classList.remove("hidden");
+        if (card) card.classList.add("border-amber-400", "bg-amber-50/20");
+    } else {
+        if (wrap) wrap.classList.add("hidden");
+        if (card) card.classList.remove("border-amber-400", "bg-amber-50/20");
+    }
+}
+
+function quickSetAllNormal() {
+    batchDraftTouched = true;
+    CLASSES_LIST.forEach(cls => {
+        const r = document.querySelector(`input[name="status-${cls}"][value="吻合"]`);
+        if (r) r.checked = true;
+        const wrap = document.getElementById(`subnotes-wrap-${cls}`);
+        if (wrap) wrap.classList.add("hidden");
+        const subnotes = document.getElementById(`subnotes-${cls}`);
+        if (subnotes) subnotes.value = "";
+        const praise = document.getElementById(`praise-${cls}`);
+        if (praise) praise.value = "";
+        const repair = document.getElementById(`repair-${cls}`);
+        if (repair) repair.value = "";
+
+        const loc = document.getElementById(`actual-location-${cls}`);
+        if (loc) loc.value = "原班教室";
+
+        const env = document.getElementById(`eval-env-${cls}`);
+        if (env) env.value = "良好";
+
+        const it = document.getElementById(`eval-it-${cls}`);
+        if (it) it.value = "觸控大屏/電子白板";
+
+        const exam = document.getElementById(`eval-exam-${cls}`);
+        if (exam) exam.value = "正常教學無測驗";
+
+        const disc = document.getElementById(`eval-discipline-${cls}`);
+        if (disc) disc.value = "良好";
+
+        const card = document.getElementById(`batch-card-${cls}`);
+        if (card) card.classList.remove("border-amber-400", "bg-amber-50/20");
+    });
+    captureBatchDraft();
+    showToast("⚡ 全校有課班級已重設為「按表授課、完全吻合」！");
+}
+
+function submitBatchInspection(skipConfirm = false) {
+    if (batchSubmitInFlight) { showToast("巡堂資料正在送出，請稍候。", false); return; }
+    const inspectorRole = document.getElementById("batch-inspector-role")?.value || "教學組長";
+    const date = document.getElementById("batch-date")?.value || new Date().toISOString().split("T")[0];
+    const weekday = document.getElementById("batch-weekday")?.value || "Wed";
+    const period = document.getElementById("batch-period")?.value || "3";
+    const nowTime = new Date().toTimeString().substring(0, 5);
+    const context = { semester: CURRENT_SEMESTER, date, weekday, period };
+    const draftSnapshot = safeSessionGet(BATCH_DRAFT_STORAGE_KEY, {})[batchDraftKey(date, weekday, period)]?.updatedAt || 0;
+    const existingPending = getPendingBatch();
+    const samePendingContext = existingPending && existingPending.context && existingPending.context.semester === context.semester && existingPending.context.date === context.date && existingPending.context.weekday === context.weekday && String(existingPending.context.period) === String(context.period);
+    const batchId = samePendingContext ? existingPending.batchId : ((typeof crypto !== "undefined" && crypto.randomUUID) ? crypto.randomUUID() : `b${Date.now()}-${Math.random().toString(36).slice(2, 8)}`);
+
+    const newEntries = [];
+
+    CLASSES_LIST.forEach(cls => {
+        const scheduleInfo = MASTER_SCHEDULE[cls]?.[weekday]?.[period];
+        if (!scheduleInfo) return;
+
+        const status = document.querySelector(`input[name="status-${cls}"]:checked`)?.value || "吻合";
+        const actualSub = document.getElementById(`actual-sub-${cls}`)?.value || scheduleInfo.sub;
+        const actualT = document.getElementById(`actual-teacher-${cls}`)?.value || scheduleInfo.t;
+        const location = document.getElementById(`actual-location-${cls}`)?.value || "原班教室";
+        const subNotes = document.getElementById(`subnotes-${cls}`)?.value || "";
+        const praise = document.getElementById(`praise-${cls}`)?.value || "";
+        const repair = document.getElementById(`repair-${cls}`)?.value || "";
+        const evalEnv = document.getElementById(`eval-env-${cls}`)?.value || "良好";
+        const evalIt = document.getElementById(`eval-it-${cls}`)?.value || "觸控大屏/電子白板";
+        const evalExam = document.getElementById(`eval-exam-${cls}`)?.value || "正常教學無測驗";
+        const evalDiscipline = document.getElementById(`eval-discipline-${cls}`)?.value || "良好";
+
+        const recId = `REC-${batchId}-${cls}`;
+
+        newEntries.push({
+            id: recId,
+            date: date,
+            weekday: weekday,
+            period: period,
+            targetClass: cls,
+            inspectorRole: inspectorRole,
+            location: location,
+            expectedSubject: scheduleInfo.sub,
+            expectedTeacher: scheduleInfo.t,
+            actualSubject: actualSub,
+            actualTeacher: actualT,
+            matchStatus: status,
+            subNotes: subNotes,
+            evalExamItem: evalExam,
+            evalDisciplineItem: evalDiscipline,
+            evalEnvItem: evalEnv,
+            evalItItem: evalIt,
+            praiseNotes: praise,
+            repairNotes: repair,
+            improveNotes: status === "異常不符" ? (subNotes || "未依課表授課") : "",
+            createdAt: `${date} ${nowTime}`
+        });
+    });
+
+    if (newEntries.length === 0) {
+        showToast("該節次各班均為無課狀態，無需儲存", false);
+        return;
+    }
+
+    // 先確認前一批待重試資料的時段，並在真正寫入前要求人工確認。
+    if (existingPending) {
+        const pendingContext = existingPending.context;
+        const samePendingContext = pendingContext &&
+            pendingContext.semester === context.semester &&
+            pendingContext.date === context.date &&
+            pendingContext.weekday === context.weekday &&
+            String(pendingContext.period) === String(context.period);
+        if (!samePendingContext) {
+            showToast("尚有上一批巡堂資料等待重試；請先完成該批次，或在畫面上的「取消待重試」按鈕確認清除。", false);
+            return;
+        }
+    }
+    if (!skipConfirm) {
+        showCustomModal(
+            "儲存確認",
+            `即將儲存 ${date} 第 ${period} 節（${newEntries.length} 班），巡堂人員：${inspectorRole}。確認寫入試算表？`,
+            () => submitBatchInspection(true)
+        );
+        return;
+    }
+
+    const pending = existingPending;
+    if (pending) {
+        const sameContext = pending.context && pending.context.semester === context.semester && pending.context.date === context.date && pending.context.weekday === context.weekday && String(pending.context.period) === String(context.period);
+        if (!sameContext) {
+            showToast("尚有上一批巡堂資料等待重試；請先完成該批次，或在畫面上的「取消待重試」按鈕確認清除。", false);
+            return;
+        }
+        newEntries.splice(0, newEntries.length, ...(pending.entries || []));
+        showToast("沿用尚未確認成功的固定批次資料，忽略本次畫面變更。", false);
+    } else {
+        persistPendingBatch({ context, batchId, entries: newEntries, draftSnapshot, createdAt: Date.now() });
+    }
+
+    const btnDesk = document.getElementById("btn-submit-batch");
+    const btnMob = document.getElementById("btn-submit-batch-mobile");
+    if (btnDesk) btnDesk.disabled = true;
+    if (btnMob) btnMob.disabled = true;
+    batchSubmitInFlight = true;
+
+    showToast("💾 正在同步儲存至 Google 試算表並處理通報...");
+
+    google.script.run
+        .withSuccessHandler(function(res) {
+            if (btnDesk) btnDesk.disabled = false;
+            if (btnMob) btnMob.disabled = false;
+            batchSubmitInFlight = false;
+            if (res && res.success && res.duplicate) {
+                clearPendingBatch();
+                renderPendingBatchBanner();
+                batchDraftTouched = false;
+                clearBatchDraft(context, pending ? (pending.draftSnapshot || 0) : draftSnapshot);
+                showToast("此時段同一巡堂人員已有紀錄，未新增重複資料。", false);
+                refreshEmailNotificationStatus(false);
+                loadEmailDeliverySummary(false);
+                loadHistoryDataFromServer();
+                switchTab("history");
+            } else if (res && res.success) {
+                clearPendingBatch();
+                renderPendingBatchBanner();
+                batchDraftTouched = false;
+                clearBatchDraft(context, pending ? (pending.draftSnapshot || 0) : draftSnapshot);
+                const emailResult = res.email || { status: "none", message: "" };
+                if (["partial", "failed", "skipped"].includes(emailResult.status)) {
+                    showToast(`巡查紀錄已儲存；${emailResult.message}`, false);
+                } else if (emailResult.status === "sent") {
+                    showToast(`成功儲存 ${res.count} 班；${emailResult.message}`);
+                } else {
+                    showToast(`成功儲存 ${res.count} 班巡查紀錄至【${CURRENT_SEMESTER}】！`);
+                }
+                refreshEmailNotificationStatus(false);
+                loadEmailDeliverySummary(false);
+                loadHistoryDataFromServer();
+                switchTab("history");
+            } else if (res && res.success === false) {
+                // 伺服器已確認驗證失敗且未寫入，可安全清除待重試批次；網路例外則由 failure handler 保留。
+                clearPendingBatch();
+                renderPendingBatchBanner();
+                showToast("儲存失敗: " + res.message, false);
+            } else {
+                showToast("伺服器回應不明，固定批次仍保留，請稍後重試。", false);
+            }
+        })
+        .withFailureHandler(function(err) {
+            if (btnDesk) btnDesk.disabled = false;
+            if (btnMob) btnMob.disabled = false;
+            batchSubmitInFlight = false;
+            renderPendingBatchBanner();
+            showToast("伺服器連線異常: " + err, false);
+        })
+        .saveBatchInspectionRecords(newEntries, CURRENT_SEMESTER);
+}
+
+// ---------------------- 歷史紀錄與篩選 ----------------------
+
+function uniqueInspectionRecords_(records) {
+    const latestByKey = new Map();
+    (records || []).forEach((record, index) => {
+        if (!record) return;
+        const keyParts = [
+            record.semester || CURRENT_SEMESTER, record.date, record.weekday,
+            record.period, record.targetClass, record.inspectorRole
+        ].map(value => String(value == null ? "" : value).trim());
+        const key = keyParts.every(Boolean) ? keyParts.join("|") : `row:${record.id || index}`;
+        // Map.set 會以後到的資料覆蓋前一筆，保留同一業務鍵最新的紀錄。
+        latestByKey.set(key, { record, index });
+    });
+    return Array.from(latestByKey.values())
+        .sort((a, b) => a.index - b.index)
+        .map(item => item.record);
+}
+
+function renderHistoryTable() {
+    const tbody = document.getElementById("history-table-body");
+    if (!tbody) return;
+
+    const keyword = document.getElementById("filter-keyword")?.value?.toLowerCase() || "";
+    const clsFilter = document.getElementById("filter-class")?.value || "ALL";
+    const statusFilter = document.getElementById("filter-status")?.value || "ALL";
+    const roleFilter = document.getElementById("filter-role")?.value || "ALL";
+
+    const sourceRecords = uniqueInspectionRecords_(inspectionRecords);
+    const filtered = sourceRecords.filter(r => {
+        const matchKw = (r.actualTeacher || "").toLowerCase().includes(keyword) ||
+                        (r.actualSubject || "").toLowerCase().includes(keyword) ||
+                        (r.location || "").toLowerCase().includes(keyword) ||
+                        (r.praiseNotes || "").toLowerCase().includes(keyword) ||
+                        (r.repairNotes || "").toLowerCase().includes(keyword) ||
+                        (r.subNotes || "").toLowerCase().includes(keyword);
+        const matchCls = clsFilter === "ALL" || r.targetClass === clsFilter;
+        const matchSt = statusFilter === "ALL" || r.matchStatus === statusFilter;
+        const matchRole = roleFilter === "ALL" || r.inspectorRole === roleFilter;
+        return matchKw && matchCls && matchSt && matchRole;
+    });
+
+    const badge = document.getElementById("record-count-badge");
+    if (badge) badge.innerText = filtered.length;
+
+    if (filtered.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="8" class="text-center py-8 text-slate-400 font-bold">目前學期查無巡查紀錄</td></tr>`;
+        return;
+    }
+
+    tbody.innerHTML = filtered.map(r => {
+        const statusClass = r.matchStatus === "吻合" ? "bg-emerald-100 text-emerald-800" : "bg-rose-100 text-rose-800";
+        const encodedId = encodeInlineValue(r.id);
+        return `
+            <tr class="hover:bg-slate-50 text-base">
+                <td data-label="學期／日期" class="p-3.5 font-bold text-slate-900">
+                    <span class="text-xs bg-slate-200 text-slate-700 px-1.5 py-0.5 rounded font-mono font-black">${escapeHtml(r.semester || CURRENT_SEMESTER)}</span><br>
+                    ${escapeHtml(r.date)} <span class="text-slate-500 font-normal">(第${escapeHtml(r.period)}節)</span>
+                </td>
+                <td data-label="班級" class="p-3.5 font-black text-blue-900">${escapeHtml(r.targetClass)}</td>
+                <td data-label="巡查職稱" class="p-3.5 font-bold">${escapeHtml(r.inspectorRole)}</td>
+                <td data-label="預定 vs 實授" class="p-3.5">
+                    <div class="text-slate-500 text-sm">定：${escapeHtml(r.expectedSubject)}（${escapeHtml(r.expectedTeacher)}）</div>
+                    <div class="font-black text-slate-900">實：${escapeHtml(r.actualSubject)}（${escapeHtml(r.actualTeacher)}）</div>
+                    <div class="text-xs text-blue-700 font-bold">📍 ${escapeHtml(r.location || "原班教室")}</div>
+                </td>
+                <td data-label="狀態" class="p-3.5"><span class="px-2.5 py-1 rounded-lg font-black text-sm ${statusClass}">${escapeHtml(r.matchStatus)}</span></td>
+                <td data-label="教學正常化指標" class="p-3.5 text-sm font-medium space-y-0.5">
+                    <div>• 評量：<span class="font-bold">${escapeHtml(r.evalExamItem || "正常教學")}</span></div>
+                    <div>• 常規：<span class="font-bold">${escapeHtml(r.evalDisciplineItem || "良好")}</span></div>
+                    <div>• 環境：<span class="font-bold">${escapeHtml(r.evalEnvItem || "良好")}</span></div>
+                    <div>• 媒材：<span class="font-bold">${escapeHtml(r.evalItItem || "觸控大屏")}</span></div>
+                </td>
+                <td data-label="備註與報修" class="p-3.5 text-sm space-y-1">
+                    ${r.repairNotes ? `<div class="text-amber-900 font-black bg-amber-50 p-1.5 rounded border border-amber-200">🔧 待修：${escapeHtml(r.repairNotes)}</div>` : ""}
+                    ${r.praiseNotes ? `<div class="text-emerald-700 font-bold">👍 ${escapeHtml(r.praiseNotes)}</div>` : ""}
+                    ${r.improveNotes ? `<div class="text-rose-700 font-medium">⚠️ ${escapeHtml(r.improveNotes)}</div>` : ""}
+                    ${r.subNotes ? `<div class="text-slate-600 text-xs">註：${escapeHtml(r.subNotes)}</div>` : ""}
+                </td>
+                <td data-label="操作" class="p-3.5 text-center">
+                    <button type="button" onclick="deleteInspectionRecord(decodeURIComponent('${encodedId}'))" class="p-2 text-slate-400 hover:text-red-600 transition" title="刪除紀錄">
+                        <i data-lucide="trash-2" class="w-5 h-5"></i>
+                    </button>
+                </td>
+            </tr>
+        `;
+    }).join("");
+
+    if (typeof lucide !== 'undefined') lucide.createIcons();
+}
+
+function deleteInspectionRecord(id) {
+    showCustomModal("刪除確認", "確定要從 Google 試算表中刪除這筆巡查紀錄嗎？", () => {
+        google.script.run
+            .withSuccessHandler(function(res) {
+                if (res.success) {
+                    showToast("已從試算表刪除紀錄");
+                    loadHistoryDataFromServer();
+                } else {
+                    showToast("刪除失敗: " + res.message, false);
+                }
+            })
+            .deleteRecordById(id);
+    });
+}
+
+function exportData(format) {
+    if (inspectionRecords.length === 0) {
+        showToast("目前無資料可匯出", false);
+        return;
+    }
+    const headers = [
+        "紀錄ID", "學期", "巡查日期", "星期", "節次", "班級", "巡查職稱", "地點",
+        "預定科目", "預定教師", "實授科目", "實授教師", "吻合狀態",
+        "評量檢核", "秩序狀況", "環境狀況", "資訊運用",
+        "事由說明", "優良事實", "需維修待處理", "改善備註"
+    ];
+    const rows = inspectionRecords.map(r => [
+        r.id, r.semester || CURRENT_SEMESTER, r.date, r.weekday, r.period, r.targetClass, r.inspectorRole, r.location || "原班教室",
+        r.expectedSubject, r.expectedTeacher, r.actualSubject, r.actualTeacher, r.matchStatus,
+        r.evalExamItem, r.evalDisciplineItem, r.evalEnvItem, r.evalItItem,
+        r.subNotes || "", r.praiseNotes || "", r.repairNotes || "", r.improveNotes || ""
+    ]);
+
+    const csvContent = "\uFEFF" + [headers.map(toCsvCell).join(","), ...rows.map(row => row.map(toCsvCell).join(","))].join("\n");
+    const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = `${getSchoolFileName()}_${CURRENT_SEMESTER}_巡堂紀錄_${new Date().toISOString().split("T")[0]}.csv`;
+    link.click();
+    showToast("CSV 下載完成！");
+}
+
+// ---------------------- 統計看板 ----------------------
+
+let chartInspectors, chartClasses, chartEvaluation, chartStatus;
+function initDashboardCharts() {
+    const c1 = document.getElementById("chart-inspectors")?.getContext("2d");
+    if (c1) chartInspectors = new Chart(c1, { type: "doughnut", data: { labels: [], datasets: [{ data: [], backgroundColor: ["#2563eb", "#059669", "#d97706", "#7c3aed", "#dc2626", "#475569"] }] }, options: { responsive: true, maintainAspectRatio: false } });
+
+    const c2 = document.getElementById("chart-classes")?.getContext("2d");
+    if (c2) chartClasses = new Chart(c2, { type: "bar", data: { labels: CLASSES_LIST, datasets: [{ label: "巡堂次數", data: [0,0,0,0,0,0], backgroundColor: "#3b82f6" }] }, options: { responsive: true, maintainAspectRatio: false } });
+
+    const c3 = document.getElementById("chart-evaluation")?.getContext("2d");
+    if (c3) chartEvaluation = new Chart(c3, { type: "radar", data: { labels: ["專課專授", "評量正常", "秩序良好", "環境整潔", "科技媒材運用"], datasets: [{ label: "達標率 (%)", data: [100, 100, 100, 100, 100], borderColor: "#10b981", backgroundColor: "rgba(16, 185, 129, 0.2)" }] }, options: { responsive: true, maintainAspectRatio: false } });
+
+    const c4 = document.getElementById("chart-status")?.getContext("2d");
+    if (c4) chartStatus = new Chart(c4, { type: "pie", data: { labels: ["吻合", "調課", "代理", "不符"], datasets: [{ data: [0, 0, 0, 0], backgroundColor: ["#10b981", "#f59e0b", "#3b82f6", "#ef4444"] }] }, options: { responsive: true, maintainAspectRatio: false } });
+}
+
+function updateDashboard() {
+    const records = uniqueInspectionRecords_(inspectionRecords);
+    const total = records.length;
+    document.getElementById("stat-total-count").innerText = total;
+
+    const matched = records.filter(r => r.matchStatus === "吻合").length;
+    document.getElementById("stat-match-rate").innerText = total > 0 ? `${Math.round((matched / total) * 100)}%` : "100%";
+
+    const abnormal = records.filter(r => r.matchStatus === "異常不符" || (r.repairNotes && r.repairNotes.trim())).length;
+    document.getElementById("stat-abnormal-count").innerText = abnormal;
+
+    const normalExams = records.filter(r => (r.evalExamItem || "").includes("正常")).length;
+    document.getElementById("stat-exam-rate").innerText = total > 0 ? `${Math.round((normalExams / total) * 100)}%` : "100%";
+
+    if (chartInspectors) {
+        const roles = {};
+        (SYSTEM_OPTIONS.inspectorRoles || []).forEach(role => { roles[role] = 0; });
+        records.forEach(r => {
+            if (roles[r.inspectorRole] !== undefined) roles[r.inspectorRole]++;
+            else roles[r.inspectorRole] = 1;
+        });
+        chartInspectors.data.labels = Object.keys(roles);
+        chartInspectors.data.datasets[0].data = Object.values(roles);
+        chartInspectors.update();
+    }
+
+    if (chartClasses) {
+        const clsCounts = { "一甲": 0, "二甲": 0, "三甲": 0, "四甲": 0, "五甲": 0, "六甲": 0 };
+        records.forEach(r => { if (clsCounts[r.targetClass] !== undefined) clsCounts[r.targetClass]++; });
+        chartClasses.data.datasets[0].data = Object.values(clsCounts);
+        chartClasses.update();
+    }
+
+    if (chartStatus) {
+        const st = { "吻合": 0, "調課": 0, "公假代理": 0, "異常不符": 0 };
+        records.forEach(r => { if (st[r.matchStatus] !== undefined) st[r.matchStatus]++; });
+        chartStatus.data.datasets[0].data = Object.values(st);
+        chartStatus.update();
+    }
+
+    if (chartEvaluation) {
+        const envHigh = records.filter(r => (r.evalEnvItem || "").includes("良好")).length;
+        const discHigh = records.filter(r => (r.evalDisciplineItem || "").includes("良好")).length;
+        const itHigh = records.filter(r => !(r.evalItItem || "").includes("板書") && (r.evalItItem || "") !== "無").length;
+        const calc = (cnt) => total > 0 ? Math.round((cnt / total) * 100) : 100;
+        chartEvaluation.data.datasets[0].data = [
+            total > 0 ? Math.round((matched / total) * 100) : 100,
+            total > 0 ? Math.round((normalExams / total) * 100) : 100,
+            calc(discHigh),
+            calc(envHigh),
+            calc(itHigh)
+        ];
+        chartEvaluation.update();
+    }
+}
+
+// ---------------------- 總課表與教師課表速查模組 ----------------------
+
+function getTeacherScheduleData(teacherName) {
+    const sched = { "Mon": {}, "Tue": {}, "Wed": {}, "Thu": {}, "Fri": {} };
+    const classCount = {};
+    let totalPeriods = 0;
+    const weekdays = ["Mon", "Tue", "Wed", "Thu", "Fri"];
+
+    CLASSES_LIST.forEach(cls => {
+        weekdays.forEach(day => {
+            const slot = MASTER_SCHEDULE[cls]?.[day];
+            if (!slot) return;
+            for (let p = 1; p <= 7; p++) {
+                if (slot[p] && slot[p].t === teacherName) {
+                    sched[day][p] = { cls: cls, sub: slot[p].sub };
+                    totalPeriods++;
+                    classCount[cls] = (classCount[cls] || 0) + 1;
+                }
+            }
+        });
+    });
+
+    return { sched, totalPeriods, classCount };
+}
+
+function initTeacherSelectorOptions() {
+    const select = document.getElementById("select-timetable-teacher");
+    if (!select) return;
+
+    const options = TEACHERS_LIST.filter(t => t !== "代課老師").map(t => {
+        const data = getTeacherScheduleData(t);
+        return `<option value="${escapeHtml(t)}">${escapeHtml(t)} (${data.totalPeriods} 節)</option>`;
+    }).join("");
+
+    select.innerHTML = options || `<option value="">無排課教師</option>`;
+}
+
+function setTimetableMode(mode) {
+    currentTimetableMode = mode;
+    const classBtn = document.getElementById("tt-mode-btn-class");
+    const teacherBtn = document.getElementById("tt-mode-btn-teacher");
+    const classWrap = document.getElementById("timetable-class-selector-wrap");
+    const teacherWrap = document.getElementById("timetable-teacher-selector-wrap");
+
+    if (mode === "class") {
+        if (classBtn) classBtn.className = "px-3.5 py-1.5 rounded-lg bg-blue-600 text-white shadow-xs transition";
+        if (teacherBtn) teacherBtn.className = "px-3.5 py-1.5 rounded-lg text-slate-600 hover:text-slate-900 transition";
+        if (classWrap) classWrap.classList.remove("hidden");
+        if (teacherWrap) teacherWrap.classList.add("hidden");
+    } else {
+        if (classBtn) classBtn.className = "px-3.5 py-1.5 rounded-lg text-slate-600 hover:text-slate-900 transition";
+        if (teacherBtn) teacherBtn.className = "px-3.5 py-1.5 rounded-lg bg-blue-600 text-white shadow-xs transition";
+        if (classWrap) classWrap.classList.add("hidden");
+        if (teacherWrap) teacherWrap.classList.remove("hidden");
+    }
+
+    renderTimetableGrid();
+}
+
+function openTeacherModal(teacherName) {
+    if (!teacherName || teacherName === "代課老師" || teacherName.includes("無")) {
+        showToast("代課老師為差假短期代理支援，無固定配課", false);
+        return;
+    }
+
+    const { sched, totalPeriods, classCount } = getTeacherScheduleData(teacherName);
+    const modal = document.getElementById("teacher-timetable-modal");
+    const nameEl = document.getElementById("modal-teacher-name");
+    const badgeEl = document.getElementById("modal-teacher-badge");
+    const breakdownEl = document.getElementById("modal-teacher-breakdown");
+    const tbody = document.getElementById("modal-teacher-table-body");
+
+    if (!modal || !nameEl || !tbody) return;
+
+    teacherModalPreviousFocus = document.activeElement;
+    nameEl.innerText = `${teacherName} 老師個人課表`;
+    if (badgeEl) badgeEl.innerText = `全週授課 ${totalPeriods} 節`;
+
+    // 班級節數標籤
+    if (breakdownEl) {
+        const breakdownHtml = Object.entries(classCount).map(([cls, count]) => `
+            <span class="bg-blue-50 border border-blue-200 text-blue-900 font-bold px-2.5 py-1 rounded-lg">
+                ${escapeHtml(cls)}：<span class="text-blue-600">${count} 節</span>
+            </span>
+        `).join("");
+        breakdownEl.innerHTML = `<span class="text-slate-500 font-bold self-center">任教班級：</span>` + (breakdownHtml || '<span class="text-slate-400">目前無固定配課</span>');
+    }
+
+    const weekdays = ["Mon", "Tue", "Wed", "Thu", "Fri"];
+    let html = "";
+    for (let p = 1; p <= 7; p++) {
+        html += `<tr class="hover:bg-slate-50 transition text-center">`;
+        html += `<td class="p-2.5 border border-slate-200 font-bold bg-slate-50">第 ${p} 節<br><span class="text-xs text-slate-400 font-normal">${PERIOD_TIMES[p]}</span></td>`;
+
+        weekdays.forEach(day => {
+            const isWedAfternoon = (day === "Wed" && p >= 5);
+            const slot = sched[day] ? sched[day][p] : null;
+
+            if (isWedAfternoon) {
+                html += `<td class="p-2.5 border border-slate-200 bg-slate-50 text-slate-400 font-medium text-xs sm:text-sm">全校研習<br>（無課務）</td>`;
+            } else if (slot) {
+                html += `
+                    <td class="p-2.5 border border-slate-200 bg-blue-50/50">
+                        <span class="inline-block bg-blue-700 text-white font-black text-xs px-2 py-0.5 rounded shadow-xs mb-1">${escapeHtml(slot.cls)}</span>
+                        <div class="font-bold text-slate-900 text-sm sm:text-base">${escapeHtml(slot.sub)}</div>
+                    </td>
+                `;
+            } else {
+                html += `<td class="p-2.5 border border-slate-200 text-slate-300 font-medium">—</td>`;
+            }
+        });
+
+        html += `</tr>`;
+    }
+
+    tbody.innerHTML = html;
+    modal.classList.remove("hidden");
+    modal.classList.add("flex");
+    window.setTimeout(() => modal.querySelector("button")?.focus(), 0);
+    if (typeof lucide !== 'undefined') lucide.createIcons();
+}
+
+function closeTeacherModal() {
+    const modal = document.getElementById("teacher-timetable-modal");
+    if (modal) {
+        modal.classList.add("hidden");
+        modal.classList.remove("flex");
+    }
+    if (teacherModalPreviousFocus && typeof teacherModalPreviousFocus.focus === "function") teacherModalPreviousFocus.focus();
+    teacherModalPreviousFocus = null;
+}
+
+function renderTeachersQuickReferenceList() {
+    const container = document.getElementById("teachers-quick-list-container");
+    if (!container) return;
+
+    const TEACHER_META = {
+        "001 林雅惠": "三自/四藝音彈音",
+        "002 陳遠聖": "二體健/四社",
+        "003 謝佳宜": "五六社/彈資/藝音",
+        "004 胡定綸": "全校英語/一體育",
+        "005 林佳儀": "一甲導師",
+        "006 蘇英桃": "二甲導師",
+        "007 林佑仲": "三甲導師",
+        "008 李淑如": "四甲導師",
+        "009 陳芳妤": "六甲導師",
+        "010 蔡螢靜": "三社/一生活/一二彈英/四體",
+        "011 勞同光": "全校本土語(週一)",
+        "013 林叔玉": "全校自然/二生活/三五六藝美",
+        "014 陳峻漢": "五甲導師"
+    };
+
+    let html = `
+        <div class="bg-blue-50/60 p-3 rounded-xl border border-blue-200 font-bold text-blue-900 select-none">
+            <b class="text-base">代課老師</b><br>
+            <span class="text-xs text-blue-600 font-normal">差假代理支援</span>
+        </div>
+    `;
+
+    const sortedTeachers = TEACHERS_LIST.filter(t => t !== "代課老師").sort();
+    sortedTeachers.forEach(t => {
+        const data = getTeacherScheduleData(t);
+        const metaNote = TEACHER_META[t] || (Object.keys(data.classCount).join('、') ? `${Object.keys(data.classCount).join('、')} 配課` : "專任配課");
+        const encodedTeacher = encodeInlineValue(t);
+        html += `
+            <button type="button" onclick="openTeacherModal(decodeURIComponent('${encodedTeacher}'))" class="text-left bg-white hover:bg-blue-50/80 p-3 rounded-xl border border-slate-200 hover:border-blue-400 transition shadow-xs hover:shadow group cursor-pointer">
+                <div class="flex items-center justify-between mb-1">
+                    <b class="text-slate-900 group-hover:text-blue-700 text-sm sm:text-base">${escapeHtml(t)}</b>
+                    <span class="text-xs bg-blue-100 text-blue-800 px-2 py-0.5 rounded-md font-black">${data.totalPeriods}節</span>
+                </div>
+                <div class="text-xs text-slate-500 line-clamp-1 group-hover:text-blue-800">${escapeHtml(metaNote)}</div>
+                <div class="text-xs text-blue-600 font-bold mt-1.5 flex items-center space-x-1 opacity-80 group-hover:opacity-100">
+                    <i data-lucide="eye" class="w-3.5 h-3.5"></i>
+                    <span>點擊看課表</span>
+                </div>
+            </button>
+        `;
+    });
+
+    container.innerHTML = html;
+    if (typeof lucide !== 'undefined') lucide.createIcons();
+}
+
+function renderTimetableGrid() {
+    const tbody = document.getElementById("timetable-grid-body");
+    if (!tbody) return;
+
+    const labelEl = document.getElementById("timetable-view-label");
+    const subBadgeEl = document.getElementById("timetable-sub-badge");
+    const weekdays = ["Mon", "Tue", "Wed", "Thu", "Fri"];
+
+    if (currentTimetableMode === "teacher") {
+        // 教師課表模式
+        const teacherSelect = document.getElementById("select-timetable-teacher");
+        const selectedTeacher = teacherSelect?.value || TEACHERS_LIST.find(t => t !== "代課老師") || "005 林佳儀";
+        const { sched, totalPeriods } = getTeacherScheduleData(selectedTeacher);
+
+        if (labelEl) labelEl.innerText = `${selectedTeacher} 老師 個人週課表`;
+        if (subBadgeEl) subBadgeEl.innerText = `每週授課 ${totalPeriods} 節`;
+
+        let html = "";
+        for (let p = 1; p <= 7; p++) {
+            html += `<tr class="hover:bg-slate-50 transition text-center">`;
+            html += `<td class="p-3 border border-slate-200 font-black bg-slate-50">第 ${p} 節<br><span class="text-xs text-slate-400 font-normal">${PERIOD_TIMES[p]}</span></td>`;
+
+            weekdays.forEach(day => {
+                const isWedAfternoon = (day === "Wed" && p >= 5);
+                const slot = sched[day]?.[p];
+
+                if (isWedAfternoon) {
+                    html += `<td class="p-3 border border-slate-200 bg-slate-50 text-slate-400 font-bold text-sm">全校研習<br>(無排課)</td>`;
+                } else if (slot) {
+                    html += `
+                        <td class="p-3 border border-slate-200 bg-blue-50/40">
+                            <span class="inline-block bg-blue-700 text-white font-black text-xs px-2.5 py-0.5 rounded shadow-xs mb-1">${escapeHtml(slot.cls)}</span>
+                            <div class="font-black text-slate-900 text-base">${escapeHtml(slot.sub)}</div>
+                        </td>
+                    `;
+                } else {
+                    html += `<td class="p-3 border border-slate-200 text-slate-300">—</td>`;
+                }
+            });
+
+            html += `</tr>`;
+        }
+        tbody.innerHTML = html;
+
+    } else {
+        // 班級課表模式
+        const selectedClass = document.getElementById("select-timetable-class")?.value || "五甲";
+        const sched = MASTER_SCHEDULE[selectedClass] || {};
+        const classWeeklyPeriods = { "一甲": 40, "二甲": 40, "三甲": 40, "四甲": 40, "五甲": 40, "六甲": 40 };
+
+        if (labelEl) labelEl.innerText = `${selectedClass} 班級週課表`;
+        if (subBadgeEl) subBadgeEl.innerText = `全週 ${classWeeklyPeriods[selectedClass] || 40} 節`;
+
+        let html = "";
+        for (let p = 1; p <= 7; p++) {
+            html += `<tr class="hover:bg-slate-50"><td class="p-3 border border-slate-200 font-black bg-slate-50">第 ${p} 節<br><span class="text-xs text-slate-400 font-normal">${PERIOD_TIMES[p]}</span></td>`;
+            weekdays.forEach(day => {
+                const slot = sched[day]?.[p];
+                if (day === "Wed" && p >= 5) {
+                    html += `<td class="p-3 border border-slate-200 text-slate-400 bg-slate-50 text-sm font-bold">全校研習<br>(無排課)</td>`;
+                } else if (slot) {
+                    const encodedTeacher = encodeInlineValue(slot.t);
+                    html += `
+                        <td class="p-3 border border-slate-200">
+                            <div class="font-black text-blue-900 text-base">${escapeHtml(slot.sub)}</div>
+                            <button type="button" class="text-sm text-slate-600 font-bold mt-0.5 hover:text-blue-700 hover:underline" onclick="openTeacherModal(decodeURIComponent('${encodedTeacher}'))" title="點擊查看該師課表">${escapeHtml(slot.t)}</button>
+                        </td>
+                    `;
+                } else {
+                    html += `<td class="p-3 border border-slate-200 text-slate-300">—</td>`;
+                }
+            });
+            html += `</tr>`;
+        }
+        tbody.innerHTML = html;
+    }
+}
+
+// ---------------------- 備查表 (列印/PDF) 模組 ----------------------
+
+function uniquePrintRecords_(records) {
+    const seen = new Set();
+    const unique = [];
+    // 歷史資料可能含舊版重複列；以最後一筆（通常是最新儲存）代表同一班級。
+    for (let i = (records || []).length - 1; i >= 0; i--) {
+        const record = records[i];
+        const key = String(record.targetClass || "");
+        if (!key || seen.has(key)) continue;
+        seen.add(key);
+        unique.push(record);
+    }
+    return unique.reverse();
+}
+
+function initPrintSessionSelection() {
+    if (inspectionRecords.length === 0) return;
+    const sessionMap = new Map();
+    inspectionRecords.forEach(r => {
+        const key = `${r.date}|${r.period}|${r.inspectorRole || ""}`;
+        if (!sessionMap.has(key)) sessionMap.set(key, []);
+        sessionMap.get(key).push(r);
+    });
+
+    const keys = Array.from(sessionMap.keys()).sort((a, b) => b.localeCompare(a));
+    if (!selectedPrintSessionKey || !sessionMap.has(selectedPrintSessionKey)) {
+        selectedPrintSessionKey = keys[0] || "";
+    }
+
+    const select = document.getElementById("select-print-session");
+    if (select) {
+        select.innerHTML = keys.map(k => {
+            const [d, p] = k.split('|');
+            const count = uniquePrintRecords_(sessionMap.get(k)).length;
+            const role = k.split("|")[2] || "巡堂人員";
+            return `<option value="${escapeHtml(k)}" ${k === selectedPrintSessionKey ? 'selected' : ''}>${escapeHtml(d)} 第 ${escapeHtml(p)} 節（${escapeHtml(role)}，共 ${count} 班）</option>`;
+        }).join("");
+    }
+
+    if (selectedPrintSessionKey && sessionMap.has(selectedPrintSessionKey)) {
+        const activeRecords = uniquePrintRecords_(sessionMap.get(selectedPrintSessionKey) || []);
+        printSelectedIds = new Set(activeRecords.map(r => r.id));
+    }
+
+    renderPrintScopeCheckboxes();
+    renderPrintTable();
+}
+
+function handleSelectPrintSession(key) {
+    selectedPrintSessionKey = key;
+    const sessionRecords = uniquePrintRecords_(inspectionRecords.filter(r => `${r.date}|${r.period}|${r.inspectorRole || ""}` === key));
+    printSelectedIds = new Set(sessionRecords.map(r => r.id));
+    renderPrintScopeCheckboxes();
+    renderPrintTable();
+}
+
+function selectAllCurrentSession(select) {
+    if (!selectedPrintSessionKey) return;
+    const [d, p, role] = selectedPrintSessionKey.split('|');
+    const sessionRecords = uniquePrintRecords_(inspectionRecords.filter(r => r.date === d && String(r.period) === String(p) && String(r.inspectorRole || "") === String(role || "")));
+    if (select) {
+        sessionRecords.forEach(r => printSelectedIds.add(r.id));
+    } else {
+        sessionRecords.forEach(r => printSelectedIds.delete(r.id));
+    }
+    renderPrintScopeCheckboxes();
+    renderPrintTable();
+}
+
+function renderPrintScopeCheckboxes() {
+    const container = document.getElementById("print-scope-checkboxes");
+    if (!container) return;
+
+    const [curDate, curPeriod, curRole] = (selectedPrintSessionKey || "").split('|');
+    const sessionRecords = uniquePrintRecords_(inspectionRecords.filter(r => r.date === curDate && String(r.period) === String(curPeriod) && String(r.inspectorRole || "") === String(curRole || "")));
+
+    const activeCount = sessionRecords.filter(r => printSelectedIds.has(r.id)).length;
+    const countEl = document.getElementById("print-selected-count");
+    if (countEl) countEl.innerText = activeCount;
+
+    if (sessionRecords.length === 0) {
+        container.innerHTML = `<span class="text-slate-400 py-1">該時段尚無紀錄</span>`;
+        return;
+    }
+
+    container.innerHTML = sessionRecords.map(r => {
+        const isChecked = printSelectedIds.has(r.id);
+        const encodedId = encodeInlineValue(r.id);
+        return `
+            <label class="flex items-center space-x-1.5 px-3 py-1.5 rounded-xl border ${isChecked ? 'border-blue-500 bg-blue-50 text-blue-900 font-black' : 'border-slate-200 bg-white text-slate-600'} cursor-pointer select-none">
+                <input type="checkbox" ${isChecked ? "checked" : ""} onchange="togglePrintSelection(decodeURIComponent('${encodedId}'), this.checked)" class="accent-blue-600 rounded">
+                <span>${escapeHtml(r.targetClass)}</span>
+                <span class="font-normal text-xs text-slate-500">（${escapeHtml(r.actualSubject)}）</span>
+            </label>
+        `;
+    }).join("");
+}
+
+function togglePrintSelection(id, checked) {
+    if (checked) printSelectedIds.add(id);
+    else printSelectedIds.delete(id);
+    renderPrintScopeCheckboxes();
+    renderPrintTable();
+}
+
+function renderPrintTable() {
+    const tbody = document.getElementById("print-table-body");
+    if (!tbody) return;
+
+    const [date, period] = (selectedPrintSessionKey || "").split('|');
+    const records = uniquePrintRecords_(inspectionRecords.filter(r => r.date === date && String(r.period) === String(period) && printSelectedIds.has(r.id)));
+
+    document.getElementById("print-header-report-date").innerText = `製表日期：${formatRocDate(date)}`;
+    document.getElementById("print-header-session").innerText = `巡查時段：${date || '--'} 第 ${period || '--'} 節`;
+    
+    const selectedRole = (selectedPrintSessionKey || "").split("|")[2] || "";
+    const inspectorRoles = Array.from(new Set(records.map(r => r.inspectorRole).filter(Boolean)));
+    const printRole = selectedRole || inspectorRoles[0] || records[0]?.inspectorRole || "巡查人員";
+    document.getElementById("print-header-inspector").innerText = `巡堂人員：${printRole}`;
+
+    if (records.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="6" class="text-center py-6 text-slate-400 font-bold">該時段尚未勾選任何班級巡查紀錄</td></tr>`;
+        applyAutomaticPageFit();
+        return;
+    }
+
+    tbody.innerHTML = records.map(r => `
+        <tr class="text-center text-xs sm:text-sm" style="page-break-inside: avoid;">
+            <td class="p-2 font-bold">${escapeHtml(formatShortRocDate(r.date))}<br><span class="font-normal text-xs">第 ${escapeHtml(r.period)} 節（${escapeHtml(r.weekday)}）</span></td>
+            <td class="p-2 font-black text-sm sm:text-base">${escapeHtml(r.targetClass)}</td>
+            <td class="p-2 leading-tight">
+                <div class="font-black">${escapeHtml(r.expectedSubject)}</div>
+                <div class="text-xs text-slate-600 mt-0.5">${escapeHtml(r.expectedTeacher)}</div>
+            </td>
+            <td class="p-2 font-black leading-tight">
+                <div>${escapeHtml(r.actualSubject)}</div>
+                <div class="text-xs text-slate-700 font-normal mt-0.5">${escapeHtml(r.actualTeacher)}</div>
+                <div class="text-xs text-blue-900 font-bold mt-0.5">📍 ${escapeHtml(r.location || "原班教室")}</div>
+                <div class="text-xs text-blue-800 font-bold">[${escapeHtml(r.matchStatus)}]</div>
+            </td>
+            <td class="p-2 text-left text-xs leading-relaxed">
+                <div>• 評量：<span class="font-bold text-slate-900">${escapeHtml(r.evalExamItem || "正常教學")}</span></div>
+                <div>• 常規：<span class="font-bold text-slate-900">${escapeHtml(r.evalDisciplineItem || "良好")}</span></div>
+                <div>• 環境：<span class="font-bold text-slate-900">${escapeHtml(r.evalEnvItem || "良好")}</span></div>
+                <div>• 媒材：<span class="font-bold text-slate-900">${escapeHtml(r.evalItItem || "觸控大屏")}</span></div>
+            </td>
+            <td class="p-2 text-left text-xs leading-tight space-y-1">
+                ${r.praiseNotes ? `<div class="text-emerald-800 font-bold">【優】${escapeHtml(r.praiseNotes)}</div>` : ''}
+                ${r.repairNotes ? `<div class="text-amber-900 font-black">【待修】${escapeHtml(r.repairNotes)}</div>` : ''}
+                ${r.improveNotes ? `<div class="text-rose-800 font-bold">【改】${escapeHtml(r.improveNotes)}</div>` : ''}
+                ${r.subNotes ? `<div class="text-slate-600">【註】${escapeHtml(r.subNotes)}</div>` : ''}
+                ${(!r.praiseNotes && !r.repairNotes && !r.improveNotes && !r.subNotes) ? '<span class="text-slate-400">依規正常授課，無特殊備註</span>' : ''}
+            </td>
+        </tr>
+    `).join("");
+
+    applyAutomaticPageFit();
+}
+
+function changePrintDensity(density) {
+    currentPrintDensity = density;
+    applyAutomaticPageFit();
+    showToast(`已切換排版模式：${density === 'auto' ? '自動縮放單張 A4' : density === 'compact' ? '緊湊排版' : density === 'super-compact' ? '超緊湊' : '標準排版'}`);
+}
+
+function applyAutomaticPageFit() {
+    const tableArea = document.getElementById("printable-audit-area");
+    if (!tableArea) return;
+
+    const tbody = document.getElementById("print-table-body");
+    const rowCount = tbody ? tbody.querySelectorAll("tr").length : 0;
+    const table = tableArea.querySelector("table.solid-audit-table");
+    const signTrs = tableArea.querySelectorAll("tfoot tr");
+    const signBox = signTrs.length > 1 ? signTrs[1] : null;
+
+    let fontSize = "11.5px";
+    let cellPadding = "5px 6px";
+    let signHeight = "50px";
+
+    if (currentPrintDensity === "super-compact") {
+        fontSize = "9.5px";
+        cellPadding = "2px 4px";
+        signHeight = "36px";
+    } else if (currentPrintDensity === "compact") {
+        fontSize = "10.5px";
+        cellPadding = "4px 5px";
+        signHeight = "44px";
+    } else if (currentPrintDensity === "normal") {
+        fontSize = "12px";
+        cellPadding = "7px 8px";
+        signHeight = "64px";
+    } else {
+        // "auto" mode: 依筆數自動縮放單頁
+        if (rowCount <= 3) {
+            fontSize = "12px";
+            cellPadding = "7px 8px";
+            signHeight = "60px";
+        } else if (rowCount <= 6) {
+            fontSize = "11px";
+            cellPadding = "5px 6px";
+            signHeight = "48px";
+        } else {
+            fontSize = "9.5px";
+            cellPadding = "3px 4px";
+            signHeight = "36px";
+        }
+    }
+
+    if (table) {
+        table.style.fontSize = fontSize;
+        table.querySelectorAll("th, td").forEach(cell => {
+            cell.style.padding = cellPadding;
+            cell.style.fontSize = fontSize;
+        });
+    }
+
+    if (signBox) {
+        signBox.style.height = signHeight;
+    }
+}
+
+function triggerDirectPrint() {
+    applyAutomaticPageFit();
+    window.print();
+}
+
+function exportReportToPDF() {
+    const area = document.getElementById("printable-audit-area");
+    if (!area) return;
+
+    applyAutomaticPageFit();
+    showToast("📄 正在編譯輸出單頁 A4 PDF 備查表...");
+    const [d, p] = (selectedPrintSessionKey || "").split('|');
+
+    const opt = {
+        margin: [8, 8, 8, 8],
+        filename: `${getSchoolFileName()}_走廊巡堂備查表_${CURRENT_SEMESTER}_${d || 'report'}.pdf`,
+        image: { type: 'jpeg', quality: 0.98 },
+        html2canvas: { scale: 2, useCORS: true },
+        jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
+    };
+
+    html2pdf().set(opt).from(area).save().then(() => {
+        showToast("PDF 備查表下載完成！");
+    }).catch(err => {
+        showToast("PDF 產製異常，建議直接按列印並另存為 PDF", false);
+    });
+}
+
+// ---------------------- 學期與課表設定 ----------------------
+
+function confirmSwitchActiveSemester() {
+    const targetCode = document.getElementById("select-active-semester")?.value;
+    if (!targetCode) return;
+
+    showToast("正在切換啟用學期...");
+    google.script.run
+        .withSuccessHandler(function(res) {
+            if (res.success) {
+                CURRENT_SEMESTER = res.activeSemester;
+                showToast(`已成功切換啟用學期為【${CURRENT_SEMESTER}】！`);
+                initSemesterAndSchedule();
+            }
+        })
+        .setActiveSemester(targetCode);
+}
+
+function handleCreateSemester() {
+    const code = document.getElementById("new-semester-code")?.value.trim();
+    const name = document.getElementById("new-semester-name")?.value.trim();
+    if (!code || !name) {
+        showToast("請填寫學期代碼與名稱", false);
+        return;
+    }
+
+    google.script.run
+        .withSuccessHandler(function(res) {
+            if (res.success) {
+                showToast("新增學期成功！");
+                document.getElementById("new-semester-code").value = "";
+                document.getElementById("new-semester-name").value = "";
+                initSemesterAndSchedule();
+            } else {
+                showToast("新增失敗: " + res.message, false);
+            }
+        })
+        .createNewSemester(code, name);
+}
+
+function downloadTimetableTemplate() {
+    const csvContent = 
+      "\uFEFF教師代碼姓名,星期,第1節,第2節,第3節,第4節,第5節,第6節,第7節\n" +
+      "001 林雅惠,Tue,,,,自然/三甲,自然/三甲,,\n" +
+      "001 林雅惠,Wed,,,自然/三甲,自然/三甲,,自然/三甲,\n" +
+      "001 林雅惠,Fri,,,藝音/四甲,彈音/四甲,,,\n" +
+      "002 陳遠聖,Wed,,體育/二甲,,健康/二甲,,,\n" +
+      "002 陳遠聖,Thu,,社會/四甲,,,,,\n" +
+      "004 胡定綸,Mon,,體育/一甲,,英語/五甲,,,\n" +
+      "005 林佳儀,Mon,數學/一甲,本土/一甲,國語/一甲,健康/一甲,,,\n" +
+      "005 林佳儀,Wed,彈全/一甲,國語/一甲,數學/一甲,生活/一甲,,,\n" +
+      "005 林佳儀,Thu,彈舞/一甲,數學/一甲,彈英/一甲,生活/一甲,國語/一甲,國語/一甲,生藝/一甲\n" +
+      "006 蘇英桃,Mon,國語/二甲,彈英/二甲,本土/二甲,數學/二甲,,,\n" +
+      "007 林佑仲,Mon,,數學/三甲,國語/三甲,健康/三甲,本土/三甲,自然/三甲,綜合/三甲";
+
+    const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `${getSchoolFileName()}_總課表_PDF矩陣匯入範本.csv`;
+    a.click();
+}
+
+function parseCsvRows(text) {
+    const rows = []; let row = []; let cell = ""; let quoted = false;
+    for (let i = 0; i < text.length; i++) {
+        const ch = text[i];
+        if (ch === '"') {
+            if (quoted && text[i + 1] === '"') { cell += '"'; i++; }
+            else quoted = !quoted;
+        } else if (ch === ',' && !quoted) { row.push(cell.trim()); cell = ""; }
+        else if ((ch === '\n' || ch === '\r') && !quoted) { if (ch === '\r' && text[i + 1] === '\n') i++; row.push(cell.trim()); if (row.some(Boolean)) rows.push(row); row = []; cell = ""; }
+        else cell += ch;
+    }
+    if (quoted) throw new Error("CSV 引號未閉合");
+    if (cell.length || row.length) { row.push(cell.trim()); if (row.some(Boolean)) rows.push(row); }
+    return rows;
+}
+
+function handleUploadTimetableCSV() {
+    const fileInput = document.getElementById("timetable-csv-file");
+    if (!fileInput || !fileInput.files || fileInput.files.length === 0) {
+        showToast("請先選擇課表 CSV 檔案", false);
+        return;
+    }
+
+    const file = fileInput.files[0];
+    const reader = new FileReader();
+    reader.onload = function(e) {
+        const text = e.target.result;
+        let rows;
+        try { rows = parseCsvRows(text); } catch (err) { showToast(err.message, false); return; }
+        if (rows.length <= 1) {
+            showToast("CSV 檔案無有效資料", false);
+            return;
+        }
+
+        const matrixData = [];
+        const errors = [];
+        for (let i = 1; i < rows.length; i++) {
+            const cols = rows[i];
+            if (cols.length < 3) { errors.push(`第 ${i + 1} 列欄位不足`); continue; }
+            const day = cols[1];
+            if (!/^(Mon|Tue|Wed|Thu|Fri|星期[一二三四五]|週[一二三四五]|[一二三四五])$/.test(day)) errors.push(`第 ${i + 1} 列星期格式異常`);
+            matrixData.push(cols);
+        }
+
+        if (matrixData.length === 0) {
+            showToast("無法解析 CSV 資料列", false);
+            return;
+        }
+
+        if (errors.length) { showToast(`CSV 格式檢查未通過：${errors.slice(0, 4).join("、")}`, false); return; }
+        const mode = document.getElementById("timetable-import-mode")?.value || "auto";
+        const preview = document.getElementById("timetable-csv-preview");
+        if (preview) { preview.classList.remove("hidden"); preview.textContent = `已解析 ${matrixData.length} 列；模式：${mode === "auto" ? "自動判斷" : mode === "class" ? "班級" : "教師"}${errors.length ? `。提醒：${errors.slice(0, 3).join("、")}` : "。格式初步檢查通過"}`; }
+        const importSemester = CURRENT_SEMESTER;
+        const modeLabel = mode === "auto" ? "自動判斷" : mode === "class" ? "班級" : "教師";
+        showCustomModal("課表匯入確認", `即將解析並匯入 ${matrixData.length} 列排課資料至【${importSemester}】（${modeLabel}模式），此操作將覆蓋該學期現有課表，確定繼續？`, () => {
+            showToast("正在解析矩陣課表並寫入試算表...");
+            google.script.run
+                .withSuccessHandler(function(res) {
+                    if (res.success) {
+                        showToast(`🎉 成功解析並匯入 ${res.count} 筆配課至【${CURRENT_SEMESTER}】！`);
+                        fileInput.value = "";
+                        loadScheduleForSemester(CURRENT_SEMESTER);
+                    } else {
+                        showToast("匯入失敗: " + res.message, false);
+                    }
+                })
+                .withFailureHandler(function(err) {
+                    showToast("伺服器錯誤: " + err, false);
+                })
+                .importMatrixTimetable(importSemester, matrixData, mode);
+        });
+    };
+    reader.readAsText(file);
+}
+</script>
+</body>
+</html>
